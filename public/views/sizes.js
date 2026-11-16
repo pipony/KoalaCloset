@@ -1,17 +1,11 @@
 // 尺码档案：基准款并排对比 + 任选一件与基准款并排、超差部位高亮
+// 对照对象限定衣柜件（有真实合身反馈）；待买件的对照在它自己的详情页「买前对照台」
 
 import { api } from '../api.js';
-import { el, esc, openClothesPicker } from '../components.js';
-
-// 超差判定：绝对差 >3cm 或相对差 >6%
-function isDiff(a, b) {
-  if (a == null || b == null || !Number(b)) return false;
-  const d = Math.abs(a - b);
-  return d > 3 || d / b > 0.06;
-}
+import { el, esc, noLabel, openClothesPicker, compareTable, matchedBaselines } from '../components.js';
 
 export async function sizes(view) {
-  const all = await api.clothes();
+  const all = await api.clothes({ status: '在衣柜' });
   const baselines = all.filter((c) => c.isBaseline);
   const withChart = all.filter((c) => c.sizeChart?.length);
 
@@ -34,7 +28,7 @@ export async function sizes(view) {
     </p>`);
   } else {
     for (const b of baselines) {
-      baseBody.append(el`<span class="pill on" title="${esc(b.fitFeedback || '')}">${String(b.no).padStart(2, '0')} ${esc(b.name)}${b.boughtSize ? ` · ${esc(b.boughtSize)}` : ''}</span>`);
+      baseBody.append(el`<span class="pill on" title="${esc(b.fitFeedback || '')}">${noLabel(b)} ${esc(b.name)}${b.boughtSize ? ` · ${esc(b.boughtSize)}` : ''}</span>`);
     }
     baseSec.append(baseBody);
   }
@@ -48,19 +42,12 @@ export async function sizes(view) {
   cmpSec.append(cmpBody);
   view.append(cmpSec);
 
-  // 基准按类匹配：同细分优先，其次同大类；跨大类不比（外套不跟裤子比）
-  function matchedBaselines(pick) {
-    const sameSub = baselines.filter((b) => b.sub === pick.sub);
-    const sameCat = baselines.filter((b) => b.category === pick.category && b.sub !== pick.sub);
-    return [...sameSub, ...sameCat];
-  }
-
   function renderCompare(pick) {
     cmpBody.innerHTML = '';
     const head = el`
       <div class="pickline" style="margin-bottom:0;align-items:center">
         <label>对照对象</label>
-        <span class="pill on">${String(pick.no).padStart(2, '0')} ${esc(pick.name)} · ${pick.sub}</span>
+        <span class="pill on">${noLabel(pick)} ${esc(pick.name)} · ${pick.sub}</span>
         <button type="button" class="btn sm" id="sz-repick">换一件</button>
         <span class="muted" style="font-size:12px;letter-spacing:.08em">自动和${pick.sub}同类基准款比，超差 >3cm 或 6% 标红</span>
       </div>`;
@@ -68,7 +55,7 @@ export async function sizes(view) {
     head.querySelector('#sz-repick').addEventListener('click', openPick);
     const wrap = el`<div style="margin-top:18px"></div>`;
     cmpBody.append(wrap);
-    const cols = matchedBaselines(pick);
+    const cols = matchedBaselines(pick, baselines);
     if (cols.length === 0) {
       wrap.append(el`<p class="muted" style="font-size:13px;letter-spacing:.06em">
         还没有「${pick.category}」类的基准款——外套跟外套比、裤子跟裤子比才有意义。去编辑几件非常合身的${pick.category}，勾上「基准款」。</p>`);
@@ -112,56 +99,9 @@ export async function sizes(view) {
         Object.entries(r.measurements).map(([p, n]) => `${esc(p)} ${n}cm`).join(' · ')
       }</td></tr>`).join('');
     list.append(el`<table class="spec-table" style="margin-bottom:8px">
-      <tr><td>档案</td><td>${String(c.no).padStart(2, '0')} ${esc(c.name)}${c.isBaseline ? ' · <span style="color:var(--accent)">基准款</span>' : ''}${c.boughtSize ? ` · 买了 ${esc(c.boughtSize)}` : ''}</td></tr>
+      <tr><td>档案</td><td>${noLabel(c)} ${esc(c.name)}${c.isBaseline ? ' · <span style="color:var(--accent)">基准款</span>' : ''}${c.boughtSize ? ` · 买了 ${esc(c.boughtSize)}` : ''}</td></tr>
       ${rows}
       ${c.fitFeedback ? `<tr><td>合身反馈</td><td>${esc(c.fitFeedback)}</td></tr>` : ''}
     </table>`);
   }
-}
-
-function compareTable(pick, baselines) {
-  const cols = [pick, ...baselines];
-  // 行 = 所选件基准码行的部位并集（优先用与购买码一致的行，没有就第一行）
-  function chartOf(c) {
-    if (!c.sizeChart?.length) return null;
-    return c.sizeChart.find((r) => c.boughtSize && r.label === c.boughtSize) || c.sizeChart[0];
-  }
-  const parts = new Set();
-  for (const c of cols) {
-    const ch = chartOf(c);
-    if (ch) Object.keys(ch.measurements).forEach((p) => parts.add(p));
-  }
-  // 超差判定的参照：优先同细分的基准（短袖跟短袖比），没有才退到其余同类基准
-  const picked = cols[0];
-  const sameSubBase = cols.filter((c) => c !== picked && c.sub === picked.sub);
-  const diffRefs = sameSubBase.length ? sameSubBase : cols.filter((c) => c !== picked);
-
-  const table = el`<table class="compare"><thead><tr><th>部位</th>${
-    cols.map((c) => {
-      const isPick = c === picked;
-      const tag = isPick ? '对照' : `基准${c.sub === picked.sub ? '' : ` · ${c.sub}`}`;
-      return `<th>${esc(c.name)}<small>${esc(chartOf(c)?.label || c.boughtSize || '')} · ${tag}</small></th>`;
-    }).join('')
-  }</tr></thead><tbody></tbody></table>`;
-  const tbody = table.querySelector('tbody');
-  for (const part of parts) {
-    const tr = el`<tr><td>${esc(part)}</td>${cols.map(() => '<td class="empty">—</td>').join('')}</tr>`;
-    cols.forEach((c, ci) => {
-      const val = chartOf(c)?.measurements[part];
-      if (val != null) {
-        const td = tr.children[ci + 1];
-        td.textContent = `${val}`;
-        td.classList.remove('empty');
-        // 只对「被对照的那件」标超差
-        if (ci === 0 && diffRefs.some((b) => isDiff(val, chartOf(b)?.measurements[part]))) {
-          td.classList.add('diff');
-        }
-      }
-    });
-    tbody.append(tr);
-  }
-  // 合身反馈收尾行
-  const fb = el`<tr><td>合身反馈</td>${cols.map((c) => `<td style="font-size:12px;letter-spacing:0">${esc(c.fitFeedback || '—')}</td>`).join('')}</tr>`;
-  tbody.append(fb);
-  return table;
 }

@@ -2,7 +2,7 @@
 // chips 与 subcats 双向同步；条件变化即重新查询（服务端过滤）
 
 import { api } from '../api.js';
-import { el, esc, clothesCard, openPopover, closePopover, poItem, boardAdd, boardDraft, toast, vocab } from '../components.js';
+import { el, esc, clothesCard, openPopover, closePopover, poItem, boardAdd, boardDraft, toast, vocab, wishBadge } from '../components.js';
 import { state } from '../app.js';
 
 const VOCAB_KEYS = ['color', 'pattern', 'thickness', 'fit', 'length', 'neckline', 'fabric', 'elastic'];
@@ -18,6 +18,7 @@ export async function wardrobe(view) {
   let cond = null;
   let unknown = [];
   let total = 0;
+  let wishCount = 0;
 
   // —— 挂载结构 ——
   const subcats = el`<div class="subcats"></div>`;
@@ -35,19 +36,32 @@ export async function wardrobe(view) {
   }
 
   async function refresh(reopenField = null) {
-    const [all, list] = await Promise.all([
-      api.clothes(),
-      cond ? api.clothes(cond) : api.clothes(),
-    ]);
-    total = all.length;
+    // 一次全量拉回，本地分账：衣柜件 vs 待买件（待买件不进衣柜网格）
+    const all = await api.clothes();
+    const owned = all.filter((c) => c.status !== '待买');
+    const wishes = all.filter((c) => c.status === '待买');
+    const list = cond ? await api.clothes({ ...cond, status: '在衣柜' }) : owned;
+    total = owned.length;
+    wishCount = wishes.length;
+    wishBadge(wishes.length);
     renderSubcats();
     renderChips();
     renderGrid(list);
+    renderWishStrip(wishes.length);
     runhead.querySelector('span').textContent = `WARDROBE — ${list.length} / ${total} 件`;
     if (reopenField) {
       const chipEl = chipsWrap.querySelector(`[data-field="${reopenField}"]`);
       if (chipEl) openValuePopover(chipEl, reopenField);
     }
+  }
+
+  // 页底横条：待买区入口（虚拟卡片住在隔壁）
+  let wishStrip = null;
+  function renderWishStrip(n) {
+    if (wishStrip) wishStrip.remove();
+    if (n === 0) return;
+    wishStrip = el`<a class="wish-strip" href="#/wish">待买区 ${n} 件 →<span>看中的衣服先搁这儿对照，买了才进衣柜</span></a>`;
+    view.append(wishStrip);
   }
 
   // —— 分类条（与 cond.category / cond.sub 双向同步） ——
@@ -220,7 +234,7 @@ export async function wardrobe(view) {
     grid.innerHTML = '';
     if (total === 0) {
       grid.append(el`<div class="empty" style="grid-column:1/-1"><em>衣柜还是空的</em>
-        第一件衣服从「+ 录入新衣」开始 — 商品图做封面，描述卡一次填好</div>`);
+        第一件衣服从「+ 录入新衣」开始 — 商品图做封面，描述卡一次填好${wishCount > 0 ? '<br>待买区里有衣服等着——买了记得回来「转正式档案」' : ''}</div>`);
       return;
     }
     if (list.length === 0) {

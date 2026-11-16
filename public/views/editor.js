@@ -1,8 +1,10 @@
 // 录入 / 编辑表单：身份组（大类↔细分联动）· 词表组 pills · 图片组（压缩上传）· 尺码组
+// 新建时可选「存为待买」；状态编辑模式不可改——转正的唯一路径是详情页「转正式档案」
 
 import { api } from '../api.js';
-import { el, els, esc, vocab, toast, boardBadge } from '../components.js';
+import { el, els, esc, vocab, toast, boardBadge, noLabel } from '../components.js';
 import { compressImage } from '../compress.js';
+import { state } from '../app.js';
 
 export async function editor(view, [param]) {
   const isNew = param === 'new';
@@ -19,6 +21,7 @@ export async function editor(view, [param]) {
     fitFeedback: item.fitFeedback || '', isBaseline: item.isBaseline,
     productPath: item.productImage, fitPath: item.fitImage, chartPath: item.sizeChartImage,
     productB64: '', fitB64: '', chartB64: '', updatedAt: item.updatedAt,
+    status: item.status || '在衣柜',
   } : {
     name: '', brand: '', category: '上装', sub: '短袖',
     color: null, pattern: null, thickness: null, fit: null, length: null,
@@ -26,11 +29,13 @@ export async function editor(view, [param]) {
     sizeChart: [], boughtSize: '', fitFeedback: '', isBaseline: false,
     productPath: null, fitPath: null, chartPath: null,
     productB64: '', fitB64: '', chartB64: '', updatedAt: null,
+    status: state.pendingStatus || '在衣柜', // 从待买区「添加待买」进来会预置
   };
+  if (isNew) state.pendingStatus = null; // 消费一次，刷新不残留
 
   view.append(els`
-    <div class="backline"><a class="linkbtn" href="${isNew ? '#/wardrobe' : `#/item/${item.id}`}">← ${isNew ? '回衣柜' : '回详情'}</a></div>
-    <div class="runhead"><h2>${isNew ? '录入新衣' : '编辑档案'}</h2><span>${isNew ? 'NEW ENTRY' : `NO.${String(item.no).padStart(2, '0')}`}</span></div>
+    <div class="backline"><a class="linkbtn" href="${isNew ? (form.status === '待买' ? '#/wish' : '#/wardrobe') : `#/item/${item.id}`}">← ${isNew ? (form.status === '待买' ? '回待买区' : '回衣柜') : '回详情'}</a></div>
+    <div class="runhead"><h2>${isNew ? '录入新衣' : '编辑档案'}</h2><span id="f-runhead">${isNew ? (form.status === '待买' ? 'WISH ENTRY' : 'NEW ENTRY') : `NO.${noLabel(item)}`}</span></div>
     <div class="form-error" id="ferr"></div>
   `);
 
@@ -43,6 +48,15 @@ export async function editor(view, [param]) {
       <div class="field"><label>大类 <span class="req">*</span></label><select id="f-cat"></select></div>
       <div class="field"><label>细分 <span class="req">*</span></label><select id="f-sub"></select></div>
     </div>
+    ${isNew ? `
+    <div class="frow" style="align-items:center">
+      <label style="font-size:11px;letter-spacing:.28em;color:var(--ink-2)">状态</label>
+      <div class="pills" id="f-status">
+        <button type="button" class="pill" data-v="在衣柜">在衣柜</button>
+        <button type="button" class="pill" data-v="待买">待买（看中还没买）</button>
+      </div>
+      <span class="muted" id="f-status-note" style="font-size:12px;letter-spacing:.06em"></span>
+    </div>` : ''}
   </div>`;
   view.append(sec1);
   const catSel = sec1.querySelector('#f-cat');
@@ -61,6 +75,37 @@ export async function editor(view, [param]) {
   fillSubs();
   catSel.addEventListener('change', () => { form.category = catSel.value; fillSubs(); renderNeckline(); });
   subSel.addEventListener('change', () => { form.sub = subSel.value; });
+
+  // 状态 pills（仅新建）：选「待买」时基准款强制关、存档文案跟着变
+  const statusRow = sec1.querySelector('#f-status');
+  const saveBtnRef = { el: null };
+  function renderStatus() {
+    if (!statusRow) return;
+    statusRow.querySelectorAll('.pill').forEach((p) => p.classList.toggle('on', p.dataset.v === form.status));
+    const note = sec1.querySelector('#f-status-note');
+    if (note) {
+      note.textContent = form.status === '待买'
+        ? '先进待买区做买前对照（该买什么码 / 有没有重复 / 能配几套），买了再转正式档案'
+        : '直接进衣柜正式档案';
+    }
+    if (form.status === '待买' && form.isBaseline) {
+      form.isBaseline = false;
+      const baseBtn = view.querySelector('#f-base');
+      if (baseBtn) baseBtn.classList.remove('on');
+    }
+    const runheadSpan = view.querySelector('#f-runhead');
+    if (runheadSpan) runheadSpan.textContent = form.status === '待买' ? 'WISH ENTRY' : 'NEW ENTRY';
+    if (saveBtnRef.el) saveBtnRef.el.textContent = form.status === '待买' ? '存入待买区' : '存入衣柜';
+  }
+  if (statusRow) {
+    statusRow.addEventListener('click', (e) => {
+      const p = e.target.closest('.pill');
+      if (!p) return;
+      form.status = p.dataset.v;
+      renderStatus();
+    });
+    renderStatus();
+  }
 
   // ========== 02 描述卡词表组 ==========
   const sec2 = el`<div class="form-section">
@@ -244,6 +289,7 @@ export async function editor(view, [param]) {
     return dz;
   }
   sec4.querySelector('#f-base').addEventListener('click', (e) => {
+    if (form.status === '待买') return toast('待买件不能标基准款——转正式档案后再来标', true);
     form.isBaseline = !form.isBaseline;
     e.target.classList.toggle('on', form.isBaseline);
   });
@@ -315,11 +361,12 @@ export async function editor(view, [param]) {
 
   // ========== 提交 ==========
   const actions = el`<div class="form-actions">
-    <button class="btn primary" id="f-save">${isNew ? '存入衣柜' : '保存修改'}</button>
-    <a class="btn" href="${isNew ? '#/wardrobe' : `#/item/${item.id}`}">取消</a>
+    <button class="btn primary" id="f-save">${isNew ? (form.status === '待买' ? '存入待买区' : '存入衣柜') : '保存修改'}</button>
+    <a class="btn" href="${isNew ? (form.status === '待买' ? '#/wish' : '#/wardrobe') : `#/item/${item.id}`}">取消</a>
     <span class="muted">词表字段以服务端校验为准，填错会拦下来</span>
   </div>`;
   view.append(actions);
+  saveBtnRef.el = actions.querySelector('#f-save');
 
   actions.querySelector('#f-save').addEventListener('click', async () => {
     // 收集表单
@@ -345,6 +392,7 @@ export async function editor(view, [param]) {
       fabric: form.fabric, elastic: form.elastic, styles: form.styles,
       sizeChart: form.sizeChart, boughtSize: form.boughtSize || null,
       fitFeedback: form.fitFeedback || null, isBaseline: form.isBaseline,
+      status: isNew ? form.status : undefined, // 编辑不改状态，转正走详情页
       productImageB64: form.productB64 || undefined,
       fitImageB64: form.fitB64 || (form.fitPath === null && item?.fitImage ? '' : undefined),
       sizeChartImageB64: form.chartB64 || (form.chartPath === null && item?.sizeChartImage ? '' : undefined),
@@ -358,7 +406,9 @@ export async function editor(view, [param]) {
       const saved = isNew
         ? await api.createCloth(payload)
         : await api.updateCloth(item.id, { ...payload, updatedAt: form.updatedAt });
-      toast(isNew ? `已入柜 · NO.${String(saved.no).padStart(2, '0')}` : '已保存');
+      toast(isNew
+        ? (form.status === '待买' ? '已进待买区，详情页里做买前对照' : `已入柜 · NO.${noLabel(saved)}`)
+        : '已保存');
       boardBadge();
       location.hash = `#/item/${saved.id}`;
     } catch (e) {

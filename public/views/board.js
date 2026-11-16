@@ -33,7 +33,7 @@ export async function board(view) {
       const inCat = items.filter((i) => i.category === cat);
       for (const it of inCat) {
         const b = el`<div class="bitem">
-          <div class="f">${it.productImage ? `<img src="/${it.productImage}" alt="">` : garmentSvg(it)}</div>
+          <div class="f">${it.status === '待买' ? '<span class="badge-wish">待买</span>' : ''}${it.productImage ? `<img src="/${it.productImage}" alt="">` : garmentSvg(it)}</div>
           <div class="nm" title="${esc(it.name)}">${esc(it.name)}</div>
           <button class="rm" title="移出">×</button>
         </div>`;
@@ -66,6 +66,7 @@ export async function board(view) {
           clothes: all,
           category: cat,
           excludeIds: boardDraft(),
+          includeWish: true, // 待买虚拟卡片可进搭配板（默认隐藏，开「含待买」才显示）
           onPick: (c) => {
             boardAdd(c.id);
             renderCanvas();
@@ -134,7 +135,10 @@ export async function board(view) {
           note: form.querySelector('#o-note').value.trim() || null,
         });
         boardSet([]);
-        toast(r.warning ? `已存档（${r.warning}）` : '已存档');
+        const hasWish = items.some((i) => i.status === '待买');
+        toast(hasWish
+          ? '已存档。这套含待买件，是虚拟搭配——买了记得回来转正，丢了它会提示先删这套'
+          : (r.warning ? `已存档（${r.warning}）` : '已存档'));
         location.hash = '#/outfits';
       } catch (e) {
         toast(e.message, true);

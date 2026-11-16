@@ -22,6 +22,13 @@ test('词表外取值被拦', () => {
   assert.equal(validateClothes({ ...good, thickness: '超厚' }).ok, false);
 });
 
+test('状态只认 在衣柜/待买，缺省合法', () => {
+  assert.equal(validateClothes({ ...good, status: '在衣柜' }).ok, true);
+  assert.equal(validateClothes({ ...good, status: '待买' }).ok, true);
+  assert.equal(validateClothes(good).ok, true); // 缺省
+  assert.equal(validateClothes({ ...good, status: '想要' }).ok, false);
+});
+
 test('风格最多两项', () => {
   assert.equal(validateClothes({ ...good, styles: ['通勤', '休闲'] }).ok, true);
   assert.equal(validateClothes({ ...good, styles: ['通勤', '休闲', '运动'] }).ok, false);

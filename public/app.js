@@ -1,9 +1,11 @@
 // SPA 入口：hash 路由 + 全局搜索条 + 导航高亮
 // 路由：#/wardrobe（默认） #/item/:id #/editor/new #/editor/:id
-//       #/outfits #/board #/sizes #/avoid
+//       #/wish #/outfits #/outfit/:id #/board #/sizes #/avoid
 
-import { boardBadge, toast } from './components.js';
+import { boardBadge, wishBadge } from './components.js';
+import { api } from './api.js';
 import { wardrobe } from './views/wardrobe.js';
+import { wish } from './views/wish.js';
 import { itemView } from './views/item.js';
 import { editor } from './views/editor.js';
 import { outfits } from './views/outfits.js';
@@ -13,11 +15,12 @@ import { sizes } from './views/sizes.js';
 import { avoid } from './views/avoid.js';
 
 const ROUTES = {
-  wardrobe, item: itemView, editor, outfits, outfit: outfitDetail, board, sizes, avoid,
+  wardrobe, wish, item: itemView, editor, outfits, outfit: outfitDetail, board, sizes, avoid,
 };
 
 export const state = {
   pendingQuery: null, // 全局搜索条 → 衣柜页消费一次
+  pendingStatus: null, // 待买区「添加待买」→ 录入页消费一次
 };
 
 function parseHash() {
@@ -39,7 +42,15 @@ async function render() {
   } catch (e) {
     view.innerHTML = `<div class="empty"><em>这一页出了点问题</em>${e.message}</div>`;
   }
+  refreshWishBadge();
   window.scrollTo(0, 0);
+}
+
+// 待买计数徽章：每次路由后对一次账（本地请求，开销可忽略）
+function refreshWishBadge() {
+  api.clothes({ status: '待买' })
+    .then((list) => wishBadge(list.length))
+    .catch(() => { /* 徽章不关键，静默 */ });
 }
 
 window.addEventListener('hashchange', render);

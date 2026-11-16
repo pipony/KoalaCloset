@@ -308,7 +308,7 @@ footer b{color:var(--ink2)}
     <div>
       <div class="kicker">Product Spec · Decided</div>
       <h1>衣服管理网站<span style="color:var(--rust)">.</span></h1>
-      <p class="hero-sub">与小迪对齐后的产品方案。以下所有条目均为<b>已拍板的结论</b>；未拍板的事项单独列于「<b>待定</b>」，谁也不替谁先做决定。</p>
+      <p class="hero-sub">与小迪对齐后的产品方案。以下所有条目均为<b>已拍板的结论</b>（原「待定」两项已于 2026-11-17 拍板，见第 05 节）。</p>
       <div class="chips">
         <span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c1.2-3.8 3.8-5.5 7-5.5s5.8 1.7 7 5.5"/></svg>单用户 · 小迪</span>
         <span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="10" rx="1"/><path d="M2 19h20"/></svg>本地运行 · Node.js</span>
@@ -339,7 +339,7 @@ footer b{color:var(--ink2)}
   <a href="#s2" data-spy="s2"><i>02</i>核心目标</a>
   <a href="#s3" data-spy="s3"><i>03</i>已定功能与用法</a>
   <a href="#s4" data-spy="s4"><i>04</i>数据与离线边界</a>
-  <a href="#s5" data-spy="s5"><i>05</i>待定事项</a>
+  <a href="#s5" data-spy="s5"><i>05</i>原待定两项 · 已拍板</a>
   <a href="#s6" data-spy="s6"><i>06</i>明确不做</a>
   <a href="#s7" data-spy="s7"><i>07</i>分期计划</a>
 </nav>
@@ -479,7 +479,7 @@ footer b{color:var(--ink2)}
 
   <!-- 3.3 -->
   <div class="feature rv" id="f33">
-    <div class="f-head"><span class="f-num">3.3</span><span class="f-title">买前对照台 / 买前查重</span><span class="badge b2" style="margin-left:auto">第二期</span></div>
+    <div class="f-head"><span class="f-num">3.3</span><span class="f-title">买前对照台 / 买前查重</span><span class="badge b1" style="margin-left:auto">已实现 · 2026-11-17</span></div>
     <div class="f-body">
       <div class="kv">
         <div class="kv-t">待买区 · 三件事</div>
@@ -492,16 +492,16 @@ footer b{color:var(--ink2)}
         <span class="farrow">→</span>
         <div class="fstage">
           <div class="mini"><b>①</b> 对照尺码档案（基准款 / 尺寸表 / 实际码），判断该买什么码</div>
-          <div class="mini"><b>②</b> 买前查重：与衣柜已有衣服比对，是不是已经有件差不多的</div>
-          <div class="mini"><b>③</b> 虚拟卡片：当新衣放进衣柜，问它能和现有衣服配出几套</div>
+          <div class="mini"><b>②</b> 买前查重：与衣柜已有衣服比对，是不是已经有件差不多的（同细分前置，文字卡加权打分：≥6 高度相似 / ≥3 有些像）</div>
+          <div class="mini"><b>③</b> 虚拟卡片：当新衣放进衣柜，问它能和现有衣服配出几套（已存套搭中同细分可替换 + 厚薄兼容温度带的套数；也可送进搭配板自由试配）</div>
         </div>
         <span class="farrow">→</span>
         <div class="fout">
-          <div class="ok">买了 → 一键转正式档案</div>
+          <div class="ok">买了 → 一键转正式档案（分到下一个衣柜编号）</div>
           <div class="no">没买 → 丢掉</div>
         </div>
       </div>
-      <div class="callout">结局二选一。待买区不沉淀垃圾数据。</div>
+      <div class="callout">结局二选一。待买区不沉淀垃圾数据。待买 = 档案里 status 标记（不占衣柜编号、不能标基准款、被虚拟搭配引用时丢不掉）；查重与配几套全程离线。</div>
     </div>
   </div>
 
@@ -533,7 +533,7 @@ footer b{color:var(--ink2)}
         <div class="kv-t">用途有二</div>
         <div class="kv-d">
           ① 日常直接按温度带 + 场景过滤已存套搭，<em>不依赖 AI、不依赖网络</em>；<br>
-          ② 已存套搭是 AI 搭配的口味参考（是否默认发给 ChatGPT → 见第 05 节待定）。
+          ② 已存套搭是 AI 搭配的口味参考（每次先问、默认不发，2026-11-17 拍板，见第 05 节）。
         </div>
       </div>
     </div>
@@ -617,7 +617,7 @@ footer b{color:var(--ink2)}
       </div>
       <div class="kv">
         <div class="kv-t">攒避雷清单</div>
-        <div class="kv-d">被否掉的组合和理由自动积累成避雷清单，随时可看。是否进一步作为负面偏好喂给 AI → 见第 05 节待定。</div>
+        <div class="kv-d">被否掉的组合和理由自动积累成避雷清单，随时可看；并作为负面偏好喂给 AI 搭配（2026-11-17 拍板，见第 05 节）。</div>
       </div>
     </div>
   </div>
@@ -695,23 +695,22 @@ footer b{color:var(--ink2)}
 
 <!-- ==================== 05 ==================== -->
 <section id="s5" data-spy>
-  <div class="sec-head rv"><span class="sec-num">05</span><span class="sec-title">待定事项</span></div>
-  <p class="sec-desc rv">以下两项未拍板——谁也不替谁先做决定，定了再动相关实现。</p>
+  <div class="sec-head rv"><span class="sec-num">05</span><span class="sec-title">原「待定」两项 · 已拍板</span></div>
+  <p class="sec-desc rv">以下两项 2026-11-17 小迪拍板，AI 搭配实现时按此口径。</p>
   <div class="pend rv">
-    <div class="qm">?</div>
+    <div class="qm" style="background:var(--olive-soft);color:var(--olive)">✓</div>
     <div>
       <h4>AI 搭配的口味参考</h4>
-      <p>是否<b>默认</b>把「已存套搭的文字版」发给 ChatGPT 当口味参考？（还是每次征询 / 默认不发）</p>
+      <p><b>每次先问，默认不发</b>——AI 搭配界面提供勾选「带上我的套搭当口味参考」，点不点小迪说了算（仍然只发文字不发照片）。</p>
     </div>
   </div>
   <div class="pend rv">
-    <div class="qm">?</div>
+    <div class="qm" style="background:var(--olive-soft);color:var(--olive)">✓</div>
     <div>
       <h4>避雷清单的用途</h4>
-      <p>「不喜欢」的理由要不要进一步作为<b>负面偏好喂给 AI</b>？目前只确定它用于「自己可见 + 换一套时排除」。</p>
+      <p><b>作为负面偏好喂给 AI 搭配</b>，避免反复推被否掉的组合；「立刻换一套」本来就带理由重跑。「自己可见 + 换一套时排除」的用途不变。</p>
     </div>
   </div>
-  <p class="pend-note rv">这两项相关，可以一起定，定了再动相关实现。</p>
 </section>
 
 <!-- ==================== 06 ==================== -->
@@ -766,7 +765,7 @@ footer b{color:var(--ink2)}
   <div class="phase p2 rv">
     <div class="phase-h"><span class="pn">Ⅱ</span><span class="pt">第二期</span><span class="ps">买前模块 + AI 增强</span></div>
     <ol>
-      <li><div class="li-t"><b>买前对照台</b>：待买区、买前查重、虚拟卡片问配几套、买完转正式档案。<span class="li-chip">查重只用文字卡片 · 可离线 · 可最先做</span><small>查重可作本期内最先做的一项。</small></div></li>
+      <li><div class="li-t"><b>买前对照台</b>：待买区、买前查重、虚拟卡片问配几套、买完转正式档案。<span class="li-chip">已实现 · 2026-11-17</span><small>38 项单元测试 + 38 项端到端验收全绿，全程离线。</small></div></li>
       <li><div class="li-t"><b>AI 标注员</b>：固定词表预填描述卡 + 用户确认。<small>反哺第一期手动录入的存量卡片。</small></div></li>
       <li><div class="li-t"><b>AI 帮忙搭配</b>：防跑偏优先级、默认不传照片、视觉复核开关默认关、接上「立刻换一套」。</div></li>
       <li><div class="li-t"><b>自然语言「问 ChatGPT」</b>：手动入口正式接入。</div></li>
@@ -777,7 +776,7 @@ footer b{color:var(--ink2)}
 </main>
 </div>
 
-<footer>依据 <b>《方案总结.md》</b>整理生成 · 结论以原文档为准 · 更新于 2026-11-14</footer>
+<footer>依据 <b>《方案总结.md》</b>整理生成 · 结论以原文档为准 · 更新于 2026-11-17</footer>
 
 <script>
 // 滚动侦测：目录高亮

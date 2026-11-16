@@ -8,9 +8,21 @@ const clothes = [
   { id: '3', name: '牛仔直筒裤', brand: 'LEVIS', category: '下装', sub: '长裤', color: '蓝', thickness: '中', styles: ['通勤', '休闲'] },
 ];
 
+// 混入一件待买件 + 一件没写 status 的旧数据，专测状态过滤
+const withStatus = [
+  ...clothes,
+  { ...clothes[0], id: '4', name: '待买的白衬衫', status: '待买' },
+];
+
 test('空条件返回全部', () => {
   assert.equal(filterClothes(clothes, {}).length, 3);
   assert.equal(filterClothes(clothes, null).length, 3);
+});
+
+test('status 条件：在衣柜 / 待买 / 缺省不筛', () => {
+  assert.deepEqual(filterClothes(withStatus, { status: '在衣柜' }).map((c) => c.id), ['1', '2', '3']);
+  assert.deepEqual(filterClothes(withStatus, { status: '待买' }).map((c) => c.id), ['4']);
+  assert.equal(filterClothes(withStatus, {}).length, 4); // 缺省拿全量，老调用方不受影响
 });
 
 test('单值条件精确过滤', () => {

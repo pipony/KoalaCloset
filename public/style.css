@@ -348,6 +348,45 @@ footer{margin-top:64px;text-align:center;font-size:11px;letter-spacing:.4em;colo
 .del-confirm.show{display:flex}
 .del-confirm span{font-size:12.5px;color:var(--accent);letter-spacing:.08em}
 
+/* ---------- 待买区 ---------- */
+/* 待买角标：空心细线（与实心的「基准款」区分——还没买到手） */
+.figure .badge-wish{
+  position:absolute;top:0;right:0;background:var(--paper);color:var(--ink-2);
+  border:1px solid var(--ink-2);font-size:10px;letter-spacing:.25em;padding:3px 9px;
+}
+.item.is-wish .figure{border-style:dashed}
+.item.is-wish:hover .figure svg{transform:none}
+/* 搭配板小卡上的待买角标（同语义，缩小） */
+.bitem .f{position:relative}
+.bitem .f .badge-wish{font-size:9px;padding:2px 6px;letter-spacing:.18em}
+.pick-card .f{position:relative}
+.pick-card .f .badge-wish{font-size:9px;padding:2px 6px;letter-spacing:.18em}
+/* 衣柜页底 → 待买区横条 */
+.wish-strip{
+  display:flex;justify-content:space-between;align-items:baseline;gap:18px;
+  border:1px dashed var(--hair);border-left:2px solid var(--accent);
+  margin-top:34px;padding:16px 22px;text-decoration:none;color:var(--ink);
+  font-size:13px;letter-spacing:.2em;transition:.2s;
+}
+.wish-strip:hover{background:var(--hover)}
+.wish-strip span{font-size:11px;letter-spacing:.12em;color:var(--ink-2)}
+/* 买前查重 / 可配套数的结果行 */
+.dup-card{
+  display:flex;justify-content:space-between;align-items:center;gap:16px;
+  border:1px solid var(--hair);padding:13px 18px;margin-bottom:10px;flex-wrap:wrap;
+  transition:.2s;
+}
+.dup-card:hover{background:var(--hover)}
+.dup-card .dup-main{display:flex;flex-direction:column;gap:3px}
+.dup-card .dup-main .muted{font-size:11.5px;letter-spacing:.1em}
+.dup-card .dup-level{
+  font-size:10px;letter-spacing:.25em;padding:4px 10px;white-space:nowrap;
+}
+.dup-card .dup-level.high{background:var(--accent);color:var(--paper)}
+.dup-card .dup-level.some{border:1px solid var(--ink-2);color:var(--ink-2)}
+/* 选择弹窗的「含待买」切换：与分类 chip 同款但右对齐隔开 */
+.modal-filters .wish-toggle{margin-left:auto;letter-spacing:.15em}
+
 @media (prefers-reduced-motion: reduce){
   .masthead,.item{animation:none;opacity:1;transform:none}
 }

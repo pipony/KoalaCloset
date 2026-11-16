@@ -10,8 +10,9 @@ import { createStore } from './lib/store.js';
 import { createImages } from './lib/images.js';
 import { parseQuery } from './lib/nlparse.js';
 import { filterClothes, filterOutfits } from './lib/filter.js';
+import { findDuplicates, matchableOutfits } from './lib/buycheck.js';
 import {
-  validateClothes, validateOutfit, validateAvoid, publicVocab, TEMP_BANDS, SCENES,
+  validateClothes, validateOutfit, validateAvoid, publicVocab, TEMP_BANDS, SCENES, TEMP_THICKNESS,
 } from './lib/vocab.js';
 
 const PORT = Number(process.env.PORT || 4173);
@@ -108,7 +109,11 @@ api.get('/api/clothes', (req, res, { query }) => {
   if (query.cond) {
     try { cond = JSON.parse(query.cond); } catch { return sendJson(res, 400, { error: 'cond 不是合法 JSON' }); }
   }
-  let list = store.read('clothes').sort((a, b) => a.no - b.no);
+  // 衣柜件按编号升序在前；待买件 no 为 null，按录入时间附后
+  let list = store.read('clothes').sort(
+    (a, b) => (a.no ?? Infinity) - (b.no ?? Infinity)
+      || (a.no == null ? a.createdAt.localeCompare(b.createdAt) : 0),
+  );
   if (cond) list = filterClothes(list, cond);
   sendJson(res, 200, list);
 });
@@ -121,13 +126,15 @@ api.get('/api/clothes/:id', (req, res, { params }) => {
 
 api.post('/api/clothes', async (req, res, { body }) => {
   if (!body.productImageB64) return sendJson(res, 400, { error: '商品图必传（封面）' });
+  const isWish = body.status === '待买';
+  if (isWish && body.isBaseline) return sendJson(res, 400, { error: '待买件不能标基准款，转正式档案后再标' });
   const item = {
     id: `c-${shortId()}`,
-    no: nextNo(),
+    no: isWish ? null : nextNo(), // 待买不占衣柜编号，转正时再分
     name: String(body.name || '').trim(),
     brand: body.brand ? String(body.brand).trim() : null,
     category: body.category, sub: body.sub,
-    status: '在衣柜',
+    status: isWish ? '待买' : '在衣柜',
     color: body.color ?? null, pattern: body.pattern ?? null, thickness: body.thickness ?? null,
     fit: body.fit ?? null, length: body.length ?? null, neckline: body.neckline ?? null,
     fabric: body.fabric ?? null, elastic: body.elastic ?? null, styles: body.styles ?? [],
@@ -199,6 +206,33 @@ api.delete('/api/clothes/:id', async (req, res, { params }) => {
   await store.save('clothes', list);
   images.remove([removed.productImage, removed.fitImage, removed.sizeChartImage].filter(Boolean));
   sendJson(res, 204, {});
+});
+
+// 待买 → 正式档案：分到下一个衣柜编号（单向操作，无编辑冲突语义）
+api.post('/api/clothes/:id/promote', async (req, res, { params }) => {
+  const list = store.read('clothes');
+  const item = list.find((c) => c.id === params.id);
+  if (!item) return sendJson(res, 404, { error: '衣服不存在' });
+  if (item.status !== '待买') return sendJson(res, 400, { error: '这件已在衣柜里，不用转' });
+  item.status = '在衣柜';
+  item.no = nextNo();
+  item.updatedAt = now();
+  await store.save('clothes', list);
+  sendJson(res, 200, item);
+});
+
+// 买前对照台数据：查重 + 可配套数（只读，一次拿全）
+api.get('/api/clothes/:id/precheck', (req, res, { params }) => {
+  const clothes = store.read('clothes');
+  const item = clothes.find((c) => c.id === params.id);
+  if (!item) return sendJson(res, 404, { error: '衣服不存在' });
+  const owned = clothes.filter((c) => c.id !== item.id && (c.status || '在衣柜') === '在衣柜');
+  const byId = new Map(clothes.map((c) => [c.id, c]));
+  sendJson(res, 200, {
+    item,
+    duplicates: findDuplicates(item, owned),
+    outfits: matchableOutfits(item, store.read('outfits'), byId, TEMP_THICKNESS),
+  });
 });
 
 function nextNo() {
