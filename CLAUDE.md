@@ -24,7 +24,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **待办**：二期未开工（买前对照台 → AI 标注员 → AI 搭配 → 问 ChatGPT，见方案第 4/7 节）；方案第 5 节两项待定需小迪拍板；建议下一步让小迪录真实衣服攒使用反馈。小尾巴（顺手可做）：套搭详情页不能补标温度带/场景、不能改标题（复刻重存可绕过）；无数据备份机制（手动拷 `data/`）。
 
-本项目**不是 git 仓库**；如果用户同意 `git init`，首个 commit 前把 `data/` 加进 `.gitignore`。
+本项目是 git 仓库（2026-11-16 init，远程 `git@github.com:pipony/KoalaCloset.git`，HTTPS 不通走 SSH）。`data/` 已在 `.gitignore`——**私人档案与图片永不入库**，重要数据靠手动备份 `data/` 文件夹。完成功能后随手 commit + push，并更新本快照。
 
 **更新本节**：每完成一个功能或拍板，随手更新此快照（新会话靠它恢复上下文）。
 
