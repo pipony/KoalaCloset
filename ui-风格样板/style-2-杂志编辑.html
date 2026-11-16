@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>样板二 · 杂志编辑风 — 小迪的衣橱</title>
+<style>
+  :root{
+    --paper:#FCFBF7;
+    --ink:#1B1814;
+    --ink-2:#8C8479;
+    --hair:#E4DED2;
+    --accent:#C6402E;
+    --serif:"Didot","Songti SC","STSong",serif;
+    --sans:-apple-system,"PingFang SC","Hiragino Sans GB",sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    font-family:var(--sans);
+    background:var(--paper);
+    color:var(--ink);
+    min-height:100vh;
+    padding:52px clamp(20px,6vw,90px) 90px;
+  }
+  .wrap{max-width:1180px;margin:0 auto}
+  /* ---------- 刊头 ---------- */
+  .masthead{border-bottom:2px solid var(--ink);padding-bottom:22px;margin-bottom:0;
+    opacity:0;animation:fade .8s ease forwards}
+  .masthead .kicker{
+    display:flex;justify-content:space-between;font-size:11px;
+    letter-spacing:.32em;color:var(--ink-2);text-transform:uppercase;margin-bottom:16px;
+  }
+  .masthead h1{
+    font-family:var(--serif);font-weight:500;
+    font-size:clamp(44px,7vw,76px);line-height:1.05;letter-spacing:.02em;
+  }
+  .masthead h1 em{font-style:italic;color:var(--accent)}
+  .masthead .sub{
+    display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;
+    margin-top:14px;font-size:12.5px;color:var(--ink-2);letter-spacing:.14em;
+  }
+  /* ---------- 搜索 ---------- */
+  .searchbar{
+    display:flex;align-items:center;gap:14px;
+    border-bottom:1px solid var(--ink);padding:16px 2px;margin:26px 0 0;
+  }
+  .searchbar .no{font-family:var(--serif);font-style:italic;font-size:14px;color:var(--accent);letter-spacing:.1em}
+  .searchbar input{flex:1;border:none;outline:none;background:transparent;font-size:16px;font-family:var(--sans);color:var(--ink)}
+  .searchbar input::placeholder{color:#BDB4A5}
+  .searchbar .hint{font-size:11px;letter-spacing:.25em;color:var(--ink-2)}
+  /* ---------- 目录导航 ---------- */
+  .toc{
+    display:flex;flex-wrap:wrap;border-left:1px solid var(--hair);border-right:1px solid var(--hair);
+    border-bottom:1px solid var(--hair);margin-top:0;
+  }
+  .toc a{
+    flex:1;text-align:center;padding:13px 10px;text-decoration:none;color:var(--ink);
+    font-size:13px;letter-spacing:.22em;border-right:1px solid var(--hair);cursor:pointer;transition:.2s;
+  }
+  .toc a:last-child{border-right:none}
+  .toc a:hover{background:#F4F0E7}
+  .toc a.on{background:var(--ink);color:var(--paper)}
+  .subcats{display:flex;flex-wrap:wrap;gap:0;border-bottom:1px solid var(--hair)}
+  .subcats span{
+    font-size:12px;color:var(--ink-2);letter-spacing:.18em;cursor:pointer;
+    padding:11px 18px;border-right:1px dotted var(--hair);transition:.2s;
+  }
+  .subcats span:first-child{border-left:1px solid var(--hair)}
+  .subcats span:hover{color:var(--ink)}
+  .subcats span.on{color:var(--accent);font-weight:600}
+  /* ---------- 过滤 ---------- */
+  .filters{
+    display:flex;gap:34px;flex-wrap:wrap;padding:18px 2px 26px;
+    font-size:12px;letter-spacing:.14em;color:var(--ink-2);
+  }
+  .filters .grp{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+  .filters b{font-weight:600;color:var(--ink);letter-spacing:.28em;font-size:11px}
+  .f{cursor:pointer;padding-bottom:3px;border-bottom:1px solid transparent;transition:.2s}
+  .f:hover{border-bottom-color:var(--ink)}
+  .f.on{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+  /* ---------- 网格 ---------- */
+  .runhead{
+    display:flex;justify-content:space-between;align-items:baseline;
+    border-top:2px solid var(--ink);padding-top:10px;margin-bottom:26px;
+  }
+  .runhead h2{font-family:var(--serif);font-size:26px;font-weight:500;letter-spacing:.06em}
+  .runhead span{font-size:11px;letter-spacing:.3em;color:var(--ink-2)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:34px 26px}
+  .item{opacity:0;transform:translateY(14px);animation:fade .6s ease forwards}
+  .item:nth-child(1){animation-delay:.03s}.item:nth-child(2){animation-delay:.08s}
+  .item:nth-child(3){animation-delay:.13s}.item:nth-child(4){animation-delay:.18s}
+  .item:nth-child(5){animation-delay:.23s}.item:nth-child(6){animation-delay:.28s}
+  .item:nth-child(7){animation-delay:.33s}.item:nth-child(8){animation-delay:.38s}
+  .item:nth-child(9){animation-delay:.43s}.item:nth-child(10){animation-delay:.48s}
+  @keyframes fade{to{opacity:1;transform:none}}
+  .figure{
+    border:1px solid var(--hair);padding:26px 18px;
+    display:flex;align-items:center;justify-content:center;height:230px;
+    position:relative;overflow:hidden;transition:.3s;background:#FDFCF9;
+  }
+  .figure::after{
+    content:"";position:absolute;inset:0;
+    background:linear-gradient(180deg,transparent 60%,rgba(27,24,20,.04));
+  }
+  .item:hover .figure{border-color:var(--ink)}
+  .figure svg{width:120px;height:120px;transition:transform .45s cubic-bezier(.2,.7,.3,1)}
+  .item:hover .figure svg{transform:scale(1.1)}
+  .caption{display:flex;gap:12px;padding-top:12px}
+  .caption .no{
+    font-family:var(--serif);font-style:italic;font-size:17px;color:var(--ink-2);
+    transition:.3s;min-width:26px;
+  }
+  .item:hover .caption .no{color:var(--accent)}
+  .caption h3{font-size:14.5px;font-weight:500;letter-spacing:.04em;margin-bottom:5px}
+  .caption p{font-size:11px;color:var(--ink-2);letter-spacing:.22em}
+  /* ---------- 套搭 ---------- */
+  .outfit-section{margin-top:72px;border-top:2px solid var(--ink);padding-top:10px}
+  .outfit{
+    display:grid;grid-template-columns:auto 1fr auto;gap:34px;align-items:center;
+    padding:30px 4px;border-bottom:1px solid var(--hair);
+  }
+  .outfit .pieces{display:flex;gap:0}
+  .outfit .p{
+    width:104px;height:104px;border:1px solid var(--hair);
+    display:flex;align-items:center;justify-content:center;margin-left:-1px;
+  }
+  .outfit .p svg{width:60px;height:60px}
+  .outfit h3{font-family:var(--serif);font-size:22px;font-weight:500;margin-bottom:8px}
+  .outfit h3 em{font-style:italic;color:var(--accent);font-size:15px;margin-left:12px;letter-spacing:.06em}
+  .outfit p{font-size:12px;color:var(--ink-2);letter-spacing:.2em}
+  .outfit .more{
+    font-size:12px;letter-spacing:.3em;border:1px solid var(--ink);padding:12px 26px;
+    cursor:pointer;background:transparent;color:var(--ink);transition:.25s;
+  }
+  .outfit .more:hover{background:var(--ink);color:var(--paper)}
+  footer{margin-top:70px;text-align:center;font-size:11px;letter-spacing:.4em;color:var(--ink-2)}
+  @media (prefers-reduced-motion: reduce){.item,.masthead{animation:none;opacity:1;transform:none}}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <symbol id="g-tee" viewBox="0 0 100 100"><path d="M30 15 L19 22 L13 41 L24 45 L27 35 L27 86 L73 86 L73 35 L76 45 L87 41 L81 22 L70 15 Q60 25 50 25 Q40 25 30 15 Z"/></symbol>
+    <symbol id="g-long" viewBox="0 0 100 100"><path d="M30 15 L17 23 L9 64 L21 68 L26 48 L26 86 L74 86 L74 48 L79 68 L91 64 L83 23 L70 15 Q60 25 50 25 Q40 25 30 15 Z"/></symbol>
+    <symbol id="g-vest" viewBox="0 0 100 100"><path d="M33 15 Q36 27 50 27 Q64 27 67 15 L75 19 L75 86 L25 86 L25 19 Z"/></symbol>
+    <symbol id="g-coat" viewBox="0 0 100 100"><path d="M29 16 L16 25 L10 60 L20 64 L25 47 L25 86 L75 86 L75 47 L80 64 L90 60 L84 25 L71 16 L62 22 L50 42 L38 22 Z"/></symbol>
+    <symbol id="g-trousers" viewBox="0 0 100 100"><path d="M27 17 L73 17 L71 88 L57 88 L50 46 L43 88 L29 88 Z"/></symbol>
+    <symbol id="g-shorts" viewBox="0 0 100 100"><path d="M27 17 L73 17 L72 58 L56 58 L50 40 L44 58 L28 58 Z"/></symbol>
+    <symbol id="g-skirt" viewBox="0 0 100 100"><path d="M31 17 Q50 23 69 17 L80 84 Q50 91 20 84 Z"/></symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+  <header class="masthead">
+    <div class="kicker"><span>Vol. 01 — 衣橱档案</span><span>Local &amp; Private</span></div>
+    <h1>小迪的衣橱<em> The Wardrobe Edit</em></h1>
+    <div class="sub">
+      <span>一百件衣服的私人刊物 · 只关于穿衣这件事</span>
+      <span>2026 · 十一月刊</span>
+    </div>
+  </header>
+
+  <div class="searchbar">
+    <span class="no">№ 001</span>
+    <input placeholder="用一句话找衣服：明天 16°C 通勤、想穿得利落一点">
+    <span class="hint">SEARCH</span>
+  </div>
+
+  <nav class="toc">
+    <a class="on">衣柜</a><a>套搭</a><a>尺码档案</a><a>避雷清单</a>
+  </nav>
+  <div class="subcats">
+    <span class="on">全部</span><span>上装</span><span>下装</span><span>短袖</span><span>长袖</span><span>无袖</span><span>外套</span><span>长裤</span><span>短裤</span><span>半裙</span>
+  </div>
+
+  <div class="filters">
+    <div class="grp"><b>温度带</b><span class="f">0°以下</span><span class="f on">10–20°</span><span class="f">20°以上</span></div>
+    <div class="grp"><b>场景</b><span class="f on">通勤</span><span class="f">周末</span><span class="f">居家</span><span class="f">出门见人</span></div>
+  </div>
+
+  <div class="runhead"><h2>本期衣柜</h2><span>WARDROBE — 10 / 100 件</span></div>
+  <div class="grid">
+    <div class="item"><div class="figure"><svg style="fill:#D8C9B0"><use href="#g-coat"/></svg></div><div class="caption"><span class="no">01</span><div><h3>燕麦色针织开衫</h3><p>外套 · 燕麦色 · M</p></div></div></div>
+    <div class="item"><div class="figure"><svg style="fill:#F8F5EF;stroke:#D9CFBB;stroke-width:1.5"><use href="#g-long"/></svg></div><div class="caption"><span class="no">02</span><div><h3>白衬衫</h3><p>长袖 · 白色 · 38</p></div></div></div>
+    <div class="item"><div class="figure"><svg style="fill:#2E3A4E"><use href="#g-coat"/></svg></div><div class="caption"><span class="no">03</span><div><h3>藏蓝西装外套</h3><p>外套 · 藏蓝 · M</p></div></div></div>
+    <div class="item"><div class="figure"><svg style="fill:#262626"><use href="#g-tee"/></svg></div><div class="caption"><span class="no">04</span><div><h3>黑色圆领 T 恤</h3><p>短袖 · 黑色 · M</p></div></div></div>
+    <div class="item"><div class="figure"><svg style="fill:#E4D9BF;stroke:#CBBE9C;stroke-width:1.5"><use href="#g-vest"/></svg></div><div class="caption"><span class="no">05</span><div><h3>米白针织马甲</h3><p>无袖 · 米白 · M</p></div></div></div>
+    <div class="item"><div class="figure"><svg style="fill:#9FB4C7"><use href="#g-long"/></svg></div><div class="caption"><span class="no">06</span><div><h3>雾霾蓝长袖 T</h3><p>长袖 · 雾霾蓝 · M</p></div></div></div>
+    <div class="item"><div class="figure"><svg style="fill:#4A6485"><use href="#g-trousers"/></svg></div><div class="caption"><span class="no">07</span><div><h3>牛仔直筒裤</h3><p>长裤 · 靛蓝 · 27</p></div></div></div>
+    <div class="item"><div class="figure"><svg style="fill:#2F2F2F"><use href="#g-trousers"/></svg></div><div class="caption"><span class="no">08</span><div><h3>黑色阔腿裤</h3><p>长裤 · 黑色 · 27</p></div></div></div>
+    <div class="item"><div class="figure"><svg style="fill:#C7B189"><use href="#g-skirt"/></svg></div><div class="caption"><span class="no">09</span><div><h3>卡其百褶半裙</h3><p>半裙 · 卡其 · S</p></div></div></div>
+    <div class="item"><div class="figure"><svg style="fill:#8F9092"><use href="#g-shorts"/></svg></div><div class="caption"><span class="no">10</span><div><h3>灰色运动短裤</h3><p>短裤 · 灰色 · M</p></div></div></div>
+  </div>
+
+  <section class="outfit-section">
+    <div class="runhead"><h2>套搭专栏</h2><span>OUTFITS — 已存 12 套</span></div>
+    <div class="outfit">
+      <div class="pieces">
+        <div class="p"><svg style="fill:#F8F5EF;stroke:#D9CFBB;stroke-width:2"><use href="#g-long"/></svg></div>
+        <div class="p"><svg style="fill:#4A6485"><use href="#g-trousers"/></svg></div>
+        <div class="p"><svg style="fill:#D8C9B0"><use href="#g-coat"/></svg></div>
+      </div>
+      <div>
+        <h3>衬衫 + 直筒裤的通勤日<em>Monday Uniform</em></h3>
+        <p>温度带 10–20° · 场景 通勤 · 存档于 11 月 2 日</p>
+      </div>
+      <button class="more">阅读全文 →</button>
+    </div>
+  </section>
+
+  <footer>风 格 样 板 二 · 杂 志 编 辑 风</footer>
+</div>
+</body>
+</html>

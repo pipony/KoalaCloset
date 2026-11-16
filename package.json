@@ -1,0 +1,11 @@
+{
+  "name": "clothes-manager",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "小迪的衣橱 —— 单用户本地衣服管理网站（全本地、离线优先、零依赖）",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  }
+}

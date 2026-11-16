@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>小迪的衣橱 · The Wardrobe Edit</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="wrap" style="max-width:1180px;margin:0 auto">
+
+  <header class="masthead">
+    <div class="kicker">
+      <span>Vol. 01 — 衣橱档案</span>
+      <span>Local &amp; Private</span>
+    </div>
+    <h1 id="brand" title="回首页" style="cursor:pointer">Koala Closet <em>The Wardrobe Edit</em></h1>
+    <div class="sub">
+      <span>一百件衣服的私人刊物 · 只关于穿衣这件事</span>
+      <span>
+        <a class="btn sm" href="#/board" id="board-entry">搭配板<span class="badge" id="board-badge" style="display:none">0</span></a>
+        <a class="btn sm primary" href="#/editor/new">+ 录入新衣</a>
+      </span>
+    </div>
+  </header>
+
+  <div class="searchbar" id="searchbar">
+    <span class="no">№ 001</span>
+    <input id="search-input" placeholder="用一句话找衣服：明天 16°C 通勤、想穿得利落一点" autocomplete="off">
+    <span class="hint">SEARCH</span>
+  </div>
+
+  <nav class="toc" id="toc">
+    <a href="#/wardrobe" data-route="wardrobe">衣柜</a>
+    <a href="#/outfits" data-route="outfits">套搭</a>
+    <a href="#/sizes" data-route="sizes">尺码档案</a>
+    <a href="#/avoid" data-route="avoid">避雷清单</a>
+  </nav>
+
+  <main id="view"></main>
+
+  <footer>小 迪 的 衣 橱 · 全 本 地 · 断 网 可 用</footer>
+</div>
+
+<!-- 衣服剪影（占位，无商品图时按细分 + 主色渲染） -->
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <symbol id="g-短袖" viewBox="0 0 100 100"><path d="M30 15 L19 22 L13 41 L24 45 L27 35 L27 86 L73 86 L73 35 L76 45 L87 41 L81 22 L70 15 Q60 25 50 25 Q40 25 30 15 Z"/></symbol>
+    <symbol id="g-长袖" viewBox="0 0 100 100"><path d="M30 15 L17 23 L9 64 L21 68 L26 48 L26 86 L74 86 L74 48 L79 68 L91 64 L83 23 L70 15 Q60 25 50 25 Q40 25 30 15 Z"/></symbol>
+    <symbol id="g-无袖" viewBox="0 0 100 100"><path d="M33 15 Q36 27 50 27 Q64 27 67 15 L75 19 L75 86 L25 86 L25 19 Z"/></symbol>
+    <symbol id="g-外套" viewBox="0 0 100 100"><path d="M29 16 L16 25 L10 60 L20 64 L25 47 L25 86 L75 86 L75 47 L80 64 L90 60 L84 25 L71 16 L62 22 L50 42 L38 22 Z"/></symbol>
+    <symbol id="g-长裤" viewBox="0 0 100 100"><path d="M27 17 L73 17 L71 88 L57 88 L50 46 L43 88 L29 88 Z"/></symbol>
+    <symbol id="g-短裤" viewBox="0 0 100 100"><path d="M27 17 L73 17 L72 58 L56 58 L50 40 L44 58 L28 58 Z"/></symbol>
+    <symbol id="g-半裙" viewBox="0 0 100 100"><path d="M31 17 Q50 23 69 17 L80 84 Q50 91 20 84 Z"/></symbol>
+  </defs>
+</svg>
+
+<div class="toast" id="toast"></div>
+<script type="module" src="/app.js"></script>
+</body>
+</html>

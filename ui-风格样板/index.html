@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UI 风格样板 · 小迪的衣橱</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    font-family:-apple-system,"PingFang SC","Hiragino Sans GB",sans-serif;
+    background:#F8F6F1;color:#3A352E;
+    min-height:100vh;display:flex;align-items:center;justify-content:center;
+    padding:50px 24px;
+  }
+  .wrap{max-width:860px;width:100%}
+  header{text-align:center;margin-bottom:44px}
+  h1{font-family:"Didot","Songti SC",serif;font-size:30px;font-weight:500;letter-spacing:.1em}
+  header p{margin-top:10px;font-size:13px;color:#8D8577;letter-spacing:.18em;line-height:1.9}
+  .list{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px}
+  a.card{
+    text-decoration:none;color:inherit;background:#FFFDF8;border-radius:14px;
+    padding:22px 22px 20px;box-shadow:0 8px 26px rgba(120,100,70,.10);
+    transition:transform .25s, box-shadow .25s;display:block;
+  }
+  a.card:hover{transform:translateY(-4px);box-shadow:0 14px 34px rgba(120,100,70,.16)}
+  .dots{display:flex;gap:7px;margin-bottom:14px}
+  .dots i{width:20px;height:20px;border-radius:50%;border:1px solid rgba(0,0,0,.08)}
+  .card h2{font-size:17px;font-weight:600;margin-bottom:6px;letter-spacing:.04em}
+  .card h2 span{font-size:11px;color:#A79C8A;font-weight:400;margin-left:8px;letter-spacing:.12em}
+  .card p{font-size:12.5px;color:#8D8577;line-height:1.8}
+  .go{display:inline-block;margin-top:12px;font-size:12px;color:#B4783C;letter-spacing:.2em}
+  footer{text-align:center;margin-top:44px;font-size:11px;color:#B4AB99;letter-spacing:.3em}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>衣橱 UI 风格样板</h1>
+    <p>四个方向 · 同一个衣柜页面 · 点开慢慢翻<br>可以在心里记下喜欢的元素，最后混搭也行</p>
+  </header>
+  <div class="list">
+    <a class="card" href="style-1-奶油暖调.html">
+      <div class="dots"><i style="background:#F7F0E6"></i><i style="background:#E4D5BE"></i><i style="background:#C68B4E"></i><i style="background:#6F5138"></i></div>
+      <h2>一 · 奶油暖调<span>Soft Cream</span></h2>
+      <p>米色底、圆角卡片、软阴影。像一本温柔的衣橱日记，耐看、放松。</p>
+      <span class="go">点开看 →</span>
+    </a>
+    <a class="card" href="style-2-杂志编辑.html">
+      <div class="dots"><i style="background:#FCFBF7"></i><i style="background:#E4DED2"></i><i style="background:#1B1814"></i><i style="background:#C6402E"></i></div>
+      <h2>二 · 杂志编辑风<span>Editorial</span></h2>
+      <p>细线框、编号排版、衬线大标题。把衣柜当一本私人时装刊，有高级感。</p>
+      <span class="go">点开看 →</span>
+    </a>
+    <a class="card" href="style-3-植物手账.html">
+      <div class="dots"><i style="background:#F3EFE4"></i><i style="background:#DCE0CB"></i><i style="background:#6E7F5C"></i><i style="background:#B4653F"></i></div>
+      <h2>三 · 植物手账<span>Botanical</span></h2>
+      <p>亚麻底、楷体、和纸胶带、小枝叶。手写手账的气息，慢而安静。</p>
+      <span class="go">点开看 →</span>
+    </a>
+    <a class="card" href="style-4-深色衣帽间.html">
+      <div class="dots"><i style="background:#1E1A16"></i><i style="background:#2B251F"></i><i style="background:#C9A46A"></i><i style="background:#EDE4D5"></i></div>
+      <h2>四 · 深色衣帽间<span>Dark Boutique</span></h2>
+      <p>深夜色的私人衣帽间，金线勾边、衬线字。最「贵」的一个方向。</p>
+      <span class="go">点开看 →</span>
+    </a>
+  </div>
+  <footer>小迪的衣橱 · UI 探索 · 2026.11</footer>
+</div>
+</body>
+</html>

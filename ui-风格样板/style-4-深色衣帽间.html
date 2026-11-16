@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>样板四 · 深色衣帽间 — 小迪的衣橱</title>
+<style>
+  :root{
+    --bg0:#151210;
+    --bg1:#1E1A16;
+    --panel:#241F1A;
+    --gold:#C9A46A;
+    --gold-dim:rgba(201,164,106,.32);
+    --ink:#EDE4D5;
+    --ink-2:#9C9081;
+    --tile:#2B251F;
+    --serif:"Didot","Songti SC","STSong",serif;
+    --sans:-apple-system,"PingFang SC","Hiragino Sans GB",sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    font-family:var(--sans);
+    background:
+      radial-gradient(1100px 480px at 50% -8%, rgba(201,164,106,.10), transparent 60%),
+      linear-gradient(180deg,var(--bg1),var(--bg0) 65%);
+    background-attachment:fixed;
+    color:var(--ink);
+    min-height:100vh;
+    padding:46px clamp(20px,5vw,72px) 90px;
+  }
+  .wrap{max-width:1140px;margin:0 auto}
+  /* ---------- 顶栏 ---------- */
+  header{
+    display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:14px;
+    padding-bottom:22px;border-bottom:1px solid var(--gold-dim);
+  }
+  h1{font-family:var(--serif);font-size:32px;font-weight:500;letter-spacing:.1em}
+  h1 span{color:var(--gold);font-style:italic;margin-left:10px;font-size:19px;letter-spacing:.08em}
+  .hstat{font-size:11px;letter-spacing:.35em;color:var(--ink-2);text-transform:uppercase}
+  /* ---------- 搜索 ---------- */
+  .search{
+    display:flex;align-items:center;gap:14px;margin:26px 0 0;
+    background:var(--panel);border:1px solid var(--gold-dim);border-radius:2px;
+    padding:15px 22px;transition:.3s;
+  }
+  .search:focus-within{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold),0 8px 30px rgba(0,0,0,.35)}
+  .search svg{flex:none;opacity:.7}
+  .search input{flex:1;border:none;outline:none;background:transparent;font-size:15px;color:var(--ink);font-family:var(--sans)}
+  .search input::placeholder{color:#7A7063}
+  /* ---------- 导航 ---------- */
+  nav{display:flex;gap:0;margin-top:20px;flex-wrap:wrap}
+  nav a{
+    font-size:13px;letter-spacing:.3em;color:var(--ink-2);cursor:pointer;
+    padding:10px 22px;border-bottom:2px solid transparent;transition:.25s;margin-bottom:-1px;text-decoration:none;
+  }
+  nav a:hover{color:var(--ink)}
+  nav a.on{color:var(--gold);border-bottom-color:var(--gold)}
+  .subcats{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}
+  .subcats span{
+    font-size:12px;letter-spacing:.16em;color:var(--ink-2);cursor:pointer;
+    padding:5px 15px;border:1px solid rgba(156,144,129,.28);border-radius:999px;transition:.25s;
+  }
+  .subcats span:hover{color:var(--ink);border-color:var(--ink-2)}
+  .subcats span.on{color:#171310;background:var(--gold);border-color:var(--gold);font-weight:600}
+  /* ---------- 过滤 ---------- */
+  .filters{display:flex;gap:30px;flex-wrap:wrap;margin:22px 0 42px;align-items:center}
+  .filters .grp{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+  .filters b{font-size:11px;letter-spacing:.35em;color:var(--gold);font-weight:500}
+  .f{font-size:12.5px;color:var(--ink-2);cursor:pointer;padding:4px 13px;border-radius:999px;transition:.2s}
+  .f:hover{color:var(--ink)}
+  .f.on{color:var(--gold);border:1px solid var(--gold-dim);background:rgba(201,164,106,.08)}
+  /* ---------- 网格 ---------- */
+  .sec-title{display:flex;align-items:baseline;gap:16px;margin-bottom:24px}
+  .sec-title h2{font-family:var(--serif);font-size:23px;font-weight:500;letter-spacing:.12em}
+  .sec-title span{font-size:11px;color:var(--ink-2);letter-spacing:.3em;text-transform:uppercase}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(214px,1fr));gap:22px}
+  .card{
+    border:1px solid rgba(156,144,129,.20);background:linear-gradient(180deg,rgba(36,31,26,.9),rgba(30,26,21,.6));
+    padding:14px;transition:.35s;position:relative;
+    opacity:0;transform:translateY(16px);
+    animation:rise .7s cubic-bezier(.2,.7,.3,1) forwards;
+  }
+  .card:nth-child(1){animation-delay:.03s}.card:nth-child(2){animation-delay:.08s}
+  .card:nth-child(3){animation-delay:.13s}.card:nth-child(4){animation-delay:.18s}
+  .card:nth-child(5){animation-delay:.23s}.card:nth-child(6){animation-delay:.28s}
+  .card:nth-child(7){animation-delay:.33s}.card:nth-child(8){animation-delay:.38s}
+  .card:nth-child(9){animation-delay:.43s}.card:nth-child(10){animation-delay:.48s}
+  @keyframes rise{to{opacity:1;transform:none}}
+  .card::before{ /* 金线内框 */
+    content:"";position:absolute;inset:5px;border:1px solid rgba(201,164,106,.14);
+    pointer-events:none;transition:.35s;
+  }
+  .card:hover{border-color:var(--gold-dim);transform:translateY(-4px);box-shadow:0 18px 40px rgba(0,0,0,.45)}
+  .card:hover::before{inset:8px;border-color:rgba(201,164,106,.34)}
+  .tile{
+    height:186px;background:var(--tile);display:flex;align-items:center;justify-content:center;overflow:hidden;
+  }
+  .tile svg{width:116px;height:116px;filter:drop-shadow(0 6px 14px rgba(0,0,0,.4));transition:transform .4s}
+  .card:hover .tile svg{transform:scale(1.07)}
+  .card h3{font-size:14.5px;font-weight:400;letter-spacing:.06em;margin:14px 4px 7px}
+  .meta{display:flex;gap:5px;flex-wrap:wrap;padding:0 4px}
+  .meta i{font-style:normal;font-size:11px;letter-spacing:.12em;color:var(--gold)}
+  .meta i::after{content:" ·"}
+  .meta i:last-child{color:var(--ink-2)}
+  .meta i:last-child::after{content:""}
+  /* ---------- 套搭 ---------- */
+  .outfit{
+    margin-top:64px;border:1px solid var(--gold-dim);padding:30px 34px;position:relative;
+    display:flex;gap:30px;align-items:center;flex-wrap:wrap;
+    background:linear-gradient(120deg,rgba(201,164,106,.06),transparent 55%);
+    opacity:0;animation:rise .7s .55s forwards;
+  }
+  .outfit::after{content:"✦";position:absolute;top:-9px;left:50%;transform:translateX(-50%);
+    background:var(--bg0);padding:0 14px;color:var(--gold);font-size:13px}
+  .outfit .pieces{display:flex;gap:12px;align-items:center}
+  .outfit .p{
+    width:96px;height:96px;background:var(--tile);
+    display:flex;align-items:center;justify-content:center;
+    border:1px solid rgba(156,144,129,.18);
+  }
+  .outfit .p svg{width:58px;height:58px}
+  .outfit .plus{color:var(--gold);font-family:var(--serif);font-size:17px}
+  .outfit .info{flex:1;min-width:220px}
+  .outfit .info h3{font-family:var(--serif);font-size:21px;font-weight:500;letter-spacing:.1em;margin-bottom:9px}
+  .outfit .info p{font-size:12.5px;color:var(--ink-2);letter-spacing:.2em}
+  .outfit .go{
+    font-size:13px;letter-spacing:.35em;cursor:pointer;
+    background:transparent;color:var(--gold);border:1px solid var(--gold);
+    padding:13px 30px 13px 34px;transition:.3s;
+  }
+  .outfit .go:hover{background:var(--gold);color:#171310}
+  footer{margin-top:74px;text-align:center;color:#6E6457;font-size:11px;letter-spacing:.45em}
+  @media (prefers-reduced-motion: reduce){.card,.outfit{animation:none;opacity:1;transform:none}}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <symbol id="g-tee" viewBox="0 0 100 100"><path d="M30 15 L19 22 L13 41 L24 45 L27 35 L27 86 L73 86 L73 35 L76 45 L87 41 L81 22 L70 15 Q60 25 50 25 Q40 25 30 15 Z"/></symbol>
+    <symbol id="g-long" viewBox="0 0 100 100"><path d="M30 15 L17 23 L9 64 L21 68 L26 48 L26 86 L74 86 L74 48 L79 68 L91 64 L83 23 L70 15 Q60 25 50 25 Q40 25 30 15 Z"/></symbol>
+    <symbol id="g-vest" viewBox="0 0 100 100"><path d="M33 15 Q36 27 50 27 Q64 27 67 15 L75 19 L75 86 L25 86 L25 19 Z"/></symbol>
+    <symbol id="g-coat" viewBox="0 0 100 100"><path d="M29 16 L16 25 L10 60 L20 64 L25 47 L25 86 L75 86 L75 47 L80 64 L90 60 L84 25 L71 16 L62 22 L50 42 L38 22 Z"/></symbol>
+    <symbol id="g-trousers" viewBox="0 0 100 100"><path d="M27 17 L73 17 L71 88 L57 88 L50 46 L43 88 L29 88 Z"/></symbol>
+    <symbol id="g-shorts" viewBox="0 0 100 100"><path d="M27 17 L73 17 L72 58 L56 58 L50 40 L44 58 L28 58 Z"/></symbol>
+    <symbol id="g-skirt" viewBox="0 0 100 100"><path d="M31 17 Q50 23 69 17 L80 84 Q50 91 20 84 Z"/></symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+  <header>
+    <h1>小迪的衣橱<span>La Garde-robe</span></h1>
+    <span class="hstat">Private Collection · No.001–100</span>
+  </header>
+
+  <div class="search">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C9A46A" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+    <input placeholder="用一句话找衣服：明天 16°C 通勤、想穿得利落一点">
+  </div>
+
+  <nav>
+    <a class="on">衣柜</a><a>套搭</a><a>尺码档案</a><a>避雷清单</a>
+  </nav>
+
+  <div class="subcats">
+    <span class="on">全部</span><span>上装</span><span>下装</span><span>短袖</span><span>长袖</span><span>无袖</span><span>外套</span><span>长裤</span><span>短裤</span><span>半裙</span>
+  </div>
+
+  <div class="filters">
+    <div class="grp"><b>温度带</b><span class="f">0°以下</span><span class="f on">10–20°</span><span class="f">20°以上</span></div>
+    <div class="grp"><b>场景</b><span class="f on">通勤</span><span class="f">周末</span><span class="f">居家</span><span class="f">出门见人</span></div>
+  </div>
+
+  <div class="sec-title"><h2>衣柜</h2><span>Wardrobe · 10 / 100</span></div>
+  <div class="grid">
+    <div class="card"><div class="tile"><svg style="fill:#D8C9B0"><use href="#g-coat"/></svg></div><h3>燕麦色针织开衫</h3><div class="meta"><i>外套</i><i>燕麦色</i><i>M</i></div></div>
+    <div class="card"><div class="tile" style="background:#332D25"><svg style="fill:#EFE9DC;stroke:#8F836B;stroke-width:1.5"><use href="#g-long"/></svg></div><h3>白衬衫</h3><div class="meta"><i>长袖</i><i>白色</i><i>38</i></div></div>
+    <div class="card"><div class="tile" style="background:#262B31"><svg style="fill:#3A4A63"><use href="#g-coat"/></svg></div><h3>藏蓝西装外套</h3><div class="meta"><i>外套</i><i>藏蓝</i><i>M</i></div></div>
+    <div class="card"><div class="tile"><svg style="fill:#484340"><use href="#g-tee"/></svg></div><h3>黑色圆领 T 恤</h3><div class="meta"><i>短袖</i><i>黑色</i><i>M</i></div></div>
+    <div class="card"><div class="tile" style="background:#362F26"><svg style="fill:#D9CBA8;stroke:#8F836B;stroke-width:1.5"><use href="#g-vest"/></svg></div><h3>米白针织马甲</h3><div class="meta"><i>无袖</i><i>米白</i><i>M</i></div></div>
+    <div class="card"><div class="tile" style="background:#2A2F32"><svg style="fill:#8FA5B8"><use href="#g-long"/></svg></div><h3>雾霾蓝长袖 T</h3><div class="meta"><i>长袖</i><i>雾霾蓝</i><i>M</i></div></div>
+    <div class="card"><div class="tile" style="background:#282D31"><svg style="fill:#5D7594"><use href="#g-trousers"/></svg></div><h3>牛仔直筒裤</h3><div class="meta"><i>长裤</i><i>靛蓝</i><i>27</i></div></div>
+    <div class="card"><div class="tile"><svg style="fill:#4A4644"><use href="#g-trousers"/></svg></div><h3>黑色阔腿裤</h3><div class="meta"><i>长裤</i><i>黑色</i><i>27</i></div></div>
+    <div class="card"><div class="tile" style="background:#353026"><svg style="fill:#C5AC82"><use href="#g-skirt"/></svg></div><h3>卡其百褶半裙</h3><div class="meta"><i>半裙</i><i>卡其</i><i>S</i></div></div>
+    <div class="card"><div class="tile" style="background:#2D2D2B"><svg style="fill:#838480"><use href="#g-shorts"/></svg></div><h3>灰色运动短裤</h3><div class="meta"><i>短裤</i><i>灰色</i><i>M</i></div></div>
+  </div>
+
+  <div class="sec-title" style="margin-top:60px"><h2>套搭</h2><span>Outfits · 12 saved</span></div>
+  <div class="outfit">
+    <div class="pieces">
+      <div class="p"><svg style="fill:#EFE9DC;stroke:#8F836B;stroke-width:2"><use href="#g-long"/></svg></div>
+      <span class="plus">+</span>
+      <div class="p"><svg style="fill:#5D7594"><use href="#g-trousers"/></svg></div>
+      <span class="plus">+</span>
+      <div class="p"><svg style="fill:#D8C9B0"><use href="#g-coat"/></svg></div>
+    </div>
+    <div class="info">
+      <h3>衬衫 + 直筒裤的通勤日</h3>
+      <p>温度带 10–20° · 场景 通勤 · 存档于 11 月 2 日</p>
+    </div>
+    <button class="go">查 看</button>
+  </div>
+
+  <footer>风 格 样 板 四 · 深 色 衣 帽 间</footer>
+</div>
+</body>
+</html>
