@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Koala Closet · 使用说明书</title>
+<style>
+:root{
+  --paper:#FCFBF7; --paper2:#F6F2E9; --ink:#1B1814; --ink2:#8C8479;
+  --hair:#E4DED2; --accent:#C6402E; --hover:#F4F0E7;
+  --serif:"Didot","Songti SC","STSong",serif;
+  --sans:-apple-system,"PingFang SC","Hirino Sans GB","Microsoft YaHei",sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--sans);background:var(--paper);color:var(--ink);line-height:1.9;font-size:15px;padding:0 0 80px}
+a{color:inherit}
+.wrap{max-width:960px;margin:0 auto;padding:0 clamp(18px,4vw,48px)}
+
+/* —— 头 —— */
+.masthead{border-bottom:2px solid var(--ink);padding:54px 0 22px;margin-bottom:44px}
+.kicker{font-size:11px;letter-spacing:.34em;color:var(--ink2);text-transform:uppercase;margin-bottom:14px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+h1{font-family:var(--serif);font-weight:500;font-size:clamp(38px,6vw,58px);letter-spacing:.02em;line-height:1.1}
+h1 em{font-style:italic;color:var(--accent)}
+.sub{margin-top:14px;font-size:13px;color:var(--ink2);letter-spacing:.1em}
+.sub b{color:var(--accent);font-weight:500}
+
+/* —— 目录 —— */
+.toc{display:flex;flex-wrap:wrap;border:1px solid var(--hair);border-bottom:2px solid var(--ink);margin-bottom:56px}
+.toc a{flex:1;text-align:center;padding:12px 8px;text-decoration:none;font-size:12.5px;letter-spacing:.18em;border-right:1px solid var(--hair);transition:.2s;min-width:92px}
+.toc a:last-child{border-right:none}
+.toc a:hover{background:var(--hover);color:var(--accent)}
+
+/* —— 章 —— */
+.chapter{margin-bottom:64px}
+.chap-head{display:flex;align-items:baseline;gap:16px;border-top:2px solid var(--ink);padding-top:10px;margin-bottom:22px}
+.chap-no{font-family:var(--serif);font-style:italic;font-size:34px;color:var(--accent)}
+.chapter h2{font-family:var(--serif);font-size:26px;font-weight:500;letter-spacing:.06em}
+.chap-head span{font-size:11px;letter-spacing:.28em;color:var(--ink2);margin-left:auto}
+.chapter h3{font-family:var(--serif);font-size:18px;font-weight:500;letter-spacing:.04em;margin:30px 0 12px}
+.chapter h3::before{content:"§ ";color:var(--accent);font-style:italic}
+p{margin-bottom:12px}
+.muted{color:var(--ink2)}
+em.red{font-style:normal;color:var(--accent);font-weight:500}
+b{font-weight:600}
+
+/* —— 卡片与格子 —— */
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px;margin:16px 0}
+.card{border:1px solid var(--hair);padding:20px 22px;background:#fffdf8}
+.card h4{font-family:var(--serif);font-size:16px;font-weight:500;margin-bottom:8px;letter-spacing:.04em}
+.card h4 .no{font-style:italic;color:var(--accent);margin-right:8px}
+.card p{font-size:13.5px;color:#4a453e;margin-bottom:0}
+.card.key{border-left:3px solid var(--accent)}
+.tag{display:inline-block;font-size:10.5px;letter-spacing:.22em;color:var(--paper);background:var(--ink);padding:3px 10px;margin-bottom:10px}
+.tag.off{background:var(--ink2)}
+.tag.on{background:var(--accent)}
+
+/* —— 步骤流 —— */
+.flow{display:flex;flex-wrap:wrap;gap:10px;align-items:stretch;margin:16px 0}
+.step{flex:1;min-width:130px;border:1px solid var(--hair);padding:14px 16px;position:relative;background:#fffdf8}
+.step b{display:block;font-size:14px;margin-bottom:4px}
+.step b i{font-style:italic;color:var(--accent);margin-right:6px;font-family:var(--serif)}
+.step span{font-size:12px;color:var(--ink2);letter-spacing:.03em}
+.arr{align-self:center;color:var(--accent);font-size:18px}
+
+/* —— 表 —— */
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:13px}
+th{font-family:var(--serif);font-weight:500;font-size:13.5px;text-align:left;border-top:2px solid var(--ink);border-bottom:1px solid var(--ink);padding:10px 12px;letter-spacing:.06em}
+td{border-bottom:1px solid var(--hair);padding:10px 12px;vertical-align:top}
+td:first-child{white-space:nowrap;font-weight:500}
+tr:last-child td{border-bottom:2px solid var(--ink)}
+
+/* —— 提示框 —— */
+.callout{border:1px solid var(--hair);border-left:3px solid var(--accent);background:#FBF6EE;padding:14px 20px;margin:18px 0;font-size:13.5px}
+.callout::before{content:"※ ";color:var(--accent);font-weight:700}
+.callout.tip{border-left-color:var(--ink2)}
+.callout.tip::before{content:"☞ ";color:var(--ink2)}
+
+/* —— AI 功能对照 —— */
+.ai-row{display:grid;grid-template-columns:150px 1fr;gap:0;border:1px solid var(--hair);margin-bottom:14px}
+.ai-row .a-name{padding:16px 18px;border-right:1px solid var(--hair);background:var(--paper2)}
+.ai-row .a-name b{font-family:var(--serif);font-size:15.5px;font-weight:500;display:block}
+.ai-row .a-name span{font-size:10.5px;letter-spacing:.2em;color:var(--ink2)}
+.ai-row .a-body{padding:14px 18px;font-size:13px}
+.ai-row .a-body p{margin-bottom:4px}
+.ai-row .a-body .muted{font-size:12px}
+
+kbd{font-family:var(--sans);font-size:12px;border:1px solid var(--hair);border-bottom-width:2px;padding:1px 7px;background:#fff;margin:0 2px;white-space:nowrap}
+.btn-demo{display:inline-block;border:1px solid var(--ink);padding:2px 10px;font-size:11.5px;letter-spacing:.2em;margin:0 2px;white-space:nowrap}
+.btn-demo.pri{background:var(--ink);color:var(--paper)}
+.btn-demo.acc{border-color:var(--accent);color:var(--accent)}
+
+footer{margin-top:70px;text-align:center;font-size:11px;letter-spacing:.4em;color:var(--ink2)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="masthead">
+  <div class="kicker"><span>User Manual · Vol.1</span><span>全本地 · 断网可用 · AI 手动触发</span></div>
+  <h1>Koala Closet <em>使用说明书</em></h1>
+  <p class="sub">一百件衣服的私人刊物 · 打开方式：<b>终端 npm start</b> → 浏览器 <b>localhost:4173</b> · 本说明对应 2026-11-18 二期收官版</p>
+</header>
+
+<nav class="toc">
+  <a href="#c1">一分钟上手</a>
+  <a href="#c2">录衣服</a>
+  <a href="#c3">找衣服</a>
+  <a href="#c4">今天穿什么</a>
+  <a href="#c5">想买衣服</a>
+  <a href="#c6">尺码档案</a>
+  <a href="#c7">AI 总览</a>
+  <a href="#c8">隐私与数据</a>
+  <a href="#c9">常见问题</a>
+</nav>
+
+<!-- ============ 01 ============ -->
+<section class="chapter" id="c1">
+  <div class="chap-head"><span class="chap-no">01</span><h2>一分钟上手</h2><span>QUICK START</span></div>
+  <p>整个网站只有五个常驻页面 + 三个按钮入口，记住这张地图就够了：</p>
+  <div class="grid2">
+    <div class="card"><h4><span class="no">Ⅰ</span>衣柜 <span class="muted" style="font-size:11px;letter-spacing:.15em">日常主页面</span></h4>
+      <p>所有衣服的格子墙。顶部搜索框<b>说一句话就能找衣服</b>；旁边<em class="red">问 AI</em> 按钮处理搜不出来的问题。</p></div>
+    <div class="card"><h4><span class="no">Ⅱ</span>套搭 <span class="muted" style="font-size:11px;letter-spacing:.15em">今天穿什么</span></h4>
+      <p>顶部「<b>AI 帮我搭</b>」出一套新方案；下方按温度带 + 场景过滤<b>已存套搭</b>（这条路断网也能用）。</p></div>
+    <div class="card"><h4><span class="no">Ⅲ</span>尺码档案</h4>
+      <p>基准款管理 + 任何两件衣服的尺寸并排对比（超差标红）。</p></div>
+    <div class="card"><h4><span class="no">Ⅳ</span>AI 标注</h4>
+      <p>衣柜描述卡的「体检」——AI 看图补空字段、挑疑似填错的，你逐项勾选才生效。</p></div>
+    <div class="card"><h4><span class="no">Ⅴ</span>避雷清单</h4>
+      <p>被否掉的搭配和理由都攒在这里，AI 搭配会自动避开。</p></div>
+    <div class="card key"><h4><span class="no">＋</span>三个按钮入口</h4>
+      <p>页头：<b>搭配板</b>（自由拼一套）· <b>买前比对</b>（想买的衣服丢截图）· <b>录入新衣</b></p></div>
+  </div>
+  <div class="callout tip"><b>新手最短路径</b>：录 10 件衣服（每件半分钟，见 02）→ 存 3 套套搭 → 明早出门前打开套搭页。数据越攒越多，AI 越来越懂你。</div>
+</section>
+
+<!-- ============ 02 ============ -->
+<section class="chapter" id="c2">
+  <div class="chap-head"><span class="chap-no">02</span><h2>录衣服：半分钟一件</h2><span>NEW ENTRY</span></div>
+  <div class="flow">
+    <div class="step"><b><i>1</i>传商品图</b><span>点「+ 录入新衣」→ 商品图区传电商页保存的图</span></div>
+    <div class="arr">→</div>
+    <div class="step"><b><i>2</i>点 AI 预填</b><span>「AI 预填描述卡」— AI 看图选好 9 组词表和名称</span></div>
+    <div class="arr">→</div>
+    <div class="step"><b><i>3</i>扫一眼改错</b><span>不对的 pills 点两下改掉，词表外的值进不来</span></div>
+    <div class="arr">→</div>
+    <div class="step"><b><i>4</i>存入衣柜</b><span>尺寸表/购买码/合身反馈顺手填了更好，也可后补</span></div>
+  </div>
+  <h3>描述卡是什么</h3>
+  <p>每件衣服一张口径统一的文字卡：主色 / 图案 / 厚薄 / 版型 / 长度 / 领型 / 面料 / 弹性 / 风格。它是<em class="red">找衣服、买前查重、AI 搭配共用的数据底座</em>——卡填得越准，后面全都越聪明。</p>
+  <div class="callout tip">合身反馈（哪里紧/松/长/短）是尺码对照时<b>真正值钱的信息</b>；拿不准合不合身的衣服再传一张正面全身实拍。</div>
+</section>
+
+<!-- ============ 03 ============ -->
+<section class="chapter" id="c3">
+  <div class="chap-head"><span class="chap-no">03</span><h2>找衣服：说人话就行</h2><span>SEARCH</span></div>
+  <h3>本地搜索（断网可用，主路径）</h3>
+  <p>衣柜页顶部搜索框，像日常说话一样输入：<kbd>明天 16 度 通勤</kbd> <kbd>白色的薄上衣</kbd> <kbd>牛仔裤</kbd>——解析出的条件会变成一排 <em class="red">chips</em>（主色：白 ×　厚薄：薄 ×），点 chip 可以改值或删掉再查，不是一锤子买卖。</p>
+  <h3>问 AI（联网，手动点击）</h3>
+  <p>本地搜索搞不定的意图型问题——<kbd>有哪些显瘦的上衣？</kbd> <kbd>见家长穿什么好</kbd>——输入后点旁边的 <span class="btn-demo pri">问 AI</span> 按钮。AI 基于你的衣柜文字卡回答，命中的衣服卡片直接列在下面，点进去看详情。</p>
+  <div class="callout">问 AI <b>只发文字卡，不发任何照片</b>；每次都要你亲手点按钮才联网。codex 不可用时会出现「复制提示词」按钮，粘到 ChatGPT 网页问也一样。</div>
+</section>
+
+<!-- ============ 04 ============ -->
+<section class="chapter" id="c4">
+  <div class="chap-head"><span class="chap-no">04</span><h2>今天穿什么</h2><span>OUTFIT</span></div>
+  <h3>离线主路径：过滤已存套搭</h3>
+  <p>套搭页选<em class="red">温度带</em>（严寒 ≤5° / 凉 5–15° / 舒适 15–25° / 热 ≥25°）和<em class="red">场景</em>（通勤/休闲/运动/约会/居家），已存的套搭直接筛出来。<b>没网也照样用。</b></p>
+  <h3>AI 帮我搭（联网，手动点击）</h3>
+  <div class="flow">
+    <div class="step"><b><i>1</i>说条件</b><span>温度带 + 场景 + 一句附加要求（如"想显利落一点"）</span></div>
+    <div class="arr">→</div>
+    <div class="step"><b><i>2</i>AI 出一套</b><span>约半分钟，草稿带标题和搭配理由</span></div>
+    <div class="arr">→</div>
+    <div class="step"><b><i>3</i>你说了算</b><span>满意 → 存为套搭；不满意 → 点理由标签</span></div>
+    <div class="arr">→</div>
+    <div class="step"><b><i>4</i>越用越准</b><span>不喜欢的自动进避雷清单并立刻换一套</span></div>
+  </div>
+  <table>
+    <tr><th style="width:180px">两个勾选框</th><th>口径</th></tr>
+    <tr><td>带上我的套搭当口味参考</td><td><b>默认不勾</b>——勾了才把已存套搭发给 AI 当口味参考（每次先问，你自己定）</td></tr>
+    <tr><td>视觉复核</td><td><b>默认关</b>——开启后 AI 会看所选衣服的照片给复核意见（这是唯一会发衣柜照片的场景）</td></tr>
+  </table>
+  <div class="callout">AI 出的是<em class="red">未存档草稿</em>，点「存为套搭」才真正入库。它的取材优先级是定死的：你的明确要求 > 已存套搭 > 配色·量感·正式度 > 自由发挥。</div>
+  <h3>自由拼一套：搭配板</h3>
+  <p>页头「搭配板」——手动挑衣服组合（待买的比对卡也能当虚拟卡片放进来试配），拼好存档时可标温度带 + 场景；套搭详情页还能写备注、传上身图。</p>
+</section>
+
+<!-- ============ 05 ============ -->
+<section class="chapter" id="c5">
+  <div class="chap-head"><span class="chap-no">05</span><h2>想买衣服：先比对，再下单</h2><span>PRE-PURCHASE</span></div>
+  <div class="flow">
+    <div class="step"><b><i>1</i>丢截图</b><span>页头「＋ 买前比对」→ 拖 1~8 张卖家秀/详情页截图，一个字段都不用填</span></div>
+    <div class="arr">→</div>
+    <div class="step"><b><i>2</i>AI 看图比对</b><span>自动提取信息，对照衣柜和基准款给结论四件套</span></div>
+    <div class="arr">→</div>
+    <div class="step"><b><i>3</i>看结论</b><span>建议码数+理由 / 有没有重复的 / 能配什么 / 一句话买不买</span></div>
+    <div class="arr">→</div>
+    <div class="step"><b><i>4</i>二选一</b><span>买了 → 转正式档案（补齐 AI 没认出的字段）；没买 → 丢掉</span></div>
+  </div>
+  <p>结论页下方还有三块<em class="red">本地印证</em>（断网也能算）：和基准款的尺寸并排表（超差标红）、衣柜查重打分（≥6 高度相似 / ≥3 有些像）、能配几套。AI 说它的，数字说数字的，互相印证。</p>
+  <div class="callout">比对是<em class="red">临时动作</em>——看完就转正或丢掉，截图文件夹会一并清理，不攒垃圾。发送内容 = 你的截图 + 衣柜文字卡，<b>不发衣柜照片</b>。</div>
+</section>
+
+<!-- ============ 06 ============ -->
+<section class="chapter" id="c6">
+  <div class="chap-head"><span class="chap-no">06</span><h2>尺码档案：买对码的地基</h2><span>SIZE</span></div>
+  <h3>基准款（2~3 件非常合身的衣服）</h3>
+  <p>在它们的编辑页勾上「基准款」。之后买前比对的尺码建议、尺码页的并排对比，全都以基准款为标尺。对照按类匹配：<b>同细分优先</b>（短袖跟短袖比），同大类兜底，跨大类不比。</p>
+  <h3>AI 标注：描述卡体检</h3>
+  <p>「AI 标注」页勾几件衣服（一批最多 12 件）→ AI 看商品图对照已填的卡 → 给两类建议：</p>
+  <div class="grid2">
+    <div class="card"><span class="tag on">补空 · 默认勾选</span><p>字段空着的，AI 给出建议值，默认已勾，点「应用」就填上。</p></div>
+    <div class="card"><span class="tag">改动 · 默认不勾</span><p>已填但 AI 认为和图对不上的，显示「现值 → AI 认为是」，<b>你不勾就绝不改</b>——动你的数据必须你亲手点头。</p></div>
+  </div>
+</section>
+
+<!-- ============ 07 ============ -->
+<section class="chapter" id="c7">
+  <div class="chap-head"><span class="chap-no">07</span><h2>AI 功能总览</h2><span>AI MAP</span></div>
+  <p>四个 AI 功能走同一条本地通道（Codex CLI），<b>没有任何 API Key</b>，全部手动触发、界面常显发送内容：</p>
+  <div class="ai-row"><div class="a-name"><b>买前比对</b><span>PRE-PURCHASE</span></div>
+    <div class="a-body"><p><b>触发</b>：丢截图后点「开始 AI 比对」　<b>发送</b>：新衣截图 + 衣柜文字卡（<span class="muted">不发衣柜照片</span>）</p><p class="muted">约 1~2 分钟 · 消耗少量额度 · 结论四件套 + 本地印证</p></div></div>
+  <div class="ai-row"><div class="a-name"><b>AI 帮我搭</b><span>STYLIST</span></div>
+    <div class="a-body"><p><b>触发</b>：点「AI 出一套」　<b>发送</b>：衣柜文字卡 + 避雷清单（总是）+ 已存套搭（勾选才发）+ 所选衣服照片（勾视觉复核才发）</p><p class="muted">约半分钟 · 草稿不落库 · 不喜欢点标签即换一套</p></div></div>
+  <div class="ai-row"><div class="a-name"><b>AI 标注</b><span>ANNOTATE</span></div>
+    <div class="a-body"><p><b>触发</b>：录入页点「AI 预填」/ 标注页点「AI 体检」　<b>发送</b>：所选衣服的商品图 + 词表 + 当前文字卡</p><p class="muted">预填约半分钟、体检约 1 分钟 · 建议逐项确认才生效</p></div></div>
+  <div class="ai-row"><div class="a-name"><b>问 ChatGPT</b><span>ASK</span></div>
+    <div class="a-body"><p><b>触发</b>：输入问题点「问 AI」　<b>发送</b>：衣柜文字卡 + 问题（<span class="muted">纯文字</span>）</p><p class="muted">约半分钟 · 回答仅供参考，不写任何数据 · 失败可复制提示词</p></div></div>
+</section>
+
+<!-- ============ 08 ============ -->
+<section class="chapter" id="c8">
+  <div class="chap-head"><span class="chap-no">08</span><h2>隐私与数据</h2><span>PRIVACY</span></div>
+  <table>
+    <tr><th style="width:200px">东西</th><th>存在哪</th><th>会出你的电脑吗</th></tr>
+    <tr><td>衣服档案 / 图片 / 套搭 / 避雷</td><td>项目里的 <kbd>data/</kbd> 文件夹（人可读 JSON + 图片）</td><td><b>不会</b>。全本地，无云同步，无账号</td></tr>
+    <tr><td>ChatGPT 登录态</td><td><kbd>~/.codex/auth.json</kbd>（Codex CLI 自己管理）</td><td>网站代码不碰它，也不在仓库里</td></tr>
+    <tr><td>AI 任务文件夹</td><td><kbd>data/ai-tasks/</kbd>（截图 + 文字卡 + 结果）</td><td>比对件丢掉时一并清理</td></tr>
+    <tr><td>代码仓库</td><td>GitHub（代码与文档）</td><td>data/ 在 .gitignore 里，<b>私人档案永不入库</b></td></tr>
+  </table>
+  <h3>联网铁律</h3>
+  <p>① 只有你点按钮才联网，绝不自动发起；② 衣柜存量档案只发<b>文字卡</b>——例外只有两处且都要你主动：买前比对的<b>新衣截图</b>（那是你提供的输入）、视觉复核勾选时的<b>所选衣服照片</b>；③ AI 永远不默默改数据——标注建议要逐项勾选，搭配是草稿要你确认。</p>
+  <div class="callout"><b>备份</b>：目前靠手动——定期把整个 <kbd>data/</kbd> 文件夹拷到移动硬盘或网盘。衣服录多了这件事最重要。</div>
+</section>
+
+<!-- ============ 09 ============ -->
+<section class="chapter" id="c9">
+  <div class="chap-head"><span class="chap-no">09</span><h2>常见问题</h2><span>FAQ</span></div>
+  <table>
+    <tr><th style="width:230px">问题</th><th>怎么办</th></tr>
+    <tr><td>AI 按钮报「codex CLI 未安装」</td><td>终端跑 <kbd>npm i -g @openai/codex</kbd>（本机已装过则检查 PATH）</td></tr>
+    <tr><td>报「Codex 未登录」</td><td>终端跑一次 <kbd>codex login</kbd>（用 ChatGPT 账号登录，之后一直复用）</td></tr>
+    <tr><td>AI 一直转圈/超时</td><td>多为网络问题——检查代理是否开启；网站会自动走系统代理，直连模式需代理在 TUN/增强模式</td></tr>
+    <tr><td>额度用完了</td><td>Plus 的 Codex 有额度上限，次日恢复；批量标注分批跑（每批 ≤12 件）</td></tr>
+    <tr><td>断网了还能用吗</td><td>能。衣柜/录入/尺码/套搭过滤/本地搜索/避雷全部离线可用，只有 4 个 AI 按钮不能用</td></tr>
+    <tr><td>怎么启动网站</td><td>终端 <kbd>cd</kbd> 到项目目录 → <kbd>npm start</kbd> → 浏览器开 <kbd>localhost:4173</kbd></td></tr>
+    <tr><td>AI 填错了怎么办</td><td>词表外的值它填不进来；词表内选错的，录入/编辑页点两下 pills 改掉即可——服务端校验永远兜底</td></tr>
+    <tr><td>数据想搬家/换电脑</td><td>整个项目文件夹拷走即可（含 data/）；新机器装好 Node 和 codex CLI 就能跑</td></tr>
+  </table>
+  <div class="callout tip">记住一个原则：<b>AI 在这个网站里永远是助手不是管家</b>——它提建议、给草稿、做预填，落不落地、改不改数、存不存档，每一次都是你说了算。</div>
+</section>
+
+<footer>KOALA CLOSET · 使 用 说 明 · 2026.11</footer>
+</div>
+</body>
+</html>
