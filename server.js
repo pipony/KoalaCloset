@@ -15,6 +15,8 @@ import { findDuplicates, matchableOutfits } from './lib/buycheck.js';
 import {
   makeTaskContext, buildOutputSchema, buildTaskPrompt, validateAiResult,
   makeAnnotateContext, buildAnnotateSchema, buildAnnotatePrompt, validateAnnotateResult,
+  makeOutfitContext, buildOutfitPrompt, buildOutfitSchema, validateOutfitAiResult,
+  makeAskContext, buildAskPrompt, buildAskSchema, validateAskResult,
 } from './lib/aitask.js';
 import {
   validateClothes, validateOutfit, validateAvoid, publicVocab, TEMP_BANDS, SCENES, TEMP_THICKNESS,
@@ -96,13 +98,14 @@ function codexEnv() {
   return env;
 }
 
-// 跑一次 codex exec：cwd 必须是任务文件夹（context.md/schema.json 在场），图以 -i 绝对路径附上
-function runCodex(dir, imgArgs, prompt, errWord) {
+// 跑一次 codex exec：cwd 必须是任务文件夹（context.md 与 schema 文件在场），图以 -i 绝对路径附上。
+// 同一任务夹多次调用（如视觉复核）用 opts 换 schema/输出文件名，避免覆盖
+function runCodex(dir, imgArgs, prompt, errWord, { schemaFile = 'schema.json', outFile = 'result.json' } = {}) {
   return new Promise((resolve, reject) => {
     const child = spawn('codex', [
       'exec', '--skip-git-repo-check', '--sandbox', 'workspace-write',
       ...imgArgs,
-      '--output-schema', 'schema.json', '-o', 'result.json',
+      '--output-schema', schemaFile, '-o', outFile,
       '-c', 'model_reasoning_effort="low"',
       prompt,
     ], { cwd: dir, stdio: ['ignore', 'ignore', 'pipe'], env: codexEnv() });
@@ -492,6 +495,133 @@ function nextNo() {
 function baselineCount() {
   return store.read('clothes').filter((c) => c.isBaseline).length;
 }
+
+// --- AI 帮忙搭配（二期③）---
+// 出一套候选（不落库，存档由用户确认走 POST /api/outfits）；
+// 口径：避雷清单总是作负面偏好；已存套搭作口味参考须每次勾选（默认不发）；视觉复核默认关、开启才发所选衣服照片
+api.post('/api/outfit-tasks', async (req, res, { body }) => {
+  const tempBand = body.tempBand && TEMP_BANDS.includes(body.tempBand) ? body.tempBand : null;
+  const scenes = Array.isArray(body.scenes) ? body.scenes.filter((s) => SCENES.includes(s)) : [];
+  const note = typeof body.note === 'string' ? body.note.trim().slice(0, 200) : '';
+  const taskId = `t-${shortId()}`;
+  const dir = path.join(TASKS_DIR, taskId);
+  fs.mkdirSync(dir, { recursive: true });
+  writeMeta(taskId, {
+    taskId, status: 'ready', createdAt: now(),
+    tempBand, scenes, note,
+    tasteRef: !!body.tasteRef,                       // 口味参考：每次先问，默认不发（2026-11-17 拍板）
+    visualReview: !!body.visualReview,               // 视觉复核：默认关，开启才发照片
+    avoid: body.avoid?.itemIds?.length
+      ? { itemIds: body.avoid.itemIds.slice(0, 5), reasonText: String(body.avoid.reasonText || '').slice(0, 200) }
+      : null,                                        // 「立刻换一套」带来的被否上一套
+  });
+  sendJson(res, 201, { taskId });
+});
+
+api.post('/api/outfit-tasks/:id/run', async (req, res, { params }) => {
+  const dir = taskDirOf(params.id);
+  const meta = readMeta(params.id);
+  if (!dir || !meta) return sendJson(res, 404, { error: '搭配任务不存在' });
+  if (meta.status === 'done') return sendJson(res, 400, { error: '这个任务已经跑完，换个新任务再试' });
+  if (runningTasks.has(params.id)) return sendJson(res, 409, { error: '这个任务正在跑，稍等' });
+  runningTasks.add(params.id);
+  try {
+    const clothes = store.read('clothes');
+    const ctx = makeOutfitContext(clothes, {
+      tempBand: meta.tempBand, scenes: meta.scenes, note: meta.note,
+      tasteRef: meta.tasteRef,
+      savedOutfits: meta.tasteRef ? store.read('outfits') : null,   // 勾了才带（隐私口径）
+      avoidlist: store.read('avoidlist'),                            // 避雷总是带（2026-11-17 拍板）
+      avoid: meta.avoid,
+    });
+    fs.writeFileSync(path.join(dir, 'context.md'), ctx);
+    fs.writeFileSync(path.join(dir, 'schema.json'), JSON.stringify(buildOutfitSchema(), null, 2));
+    await runCodex(dir, [], buildOutfitPrompt(), 'AI 搭配');
+
+    const resultPath = path.join(dir, 'result.json');
+    if (!fs.existsSync(resultPath)) return sendJson(res, 502, { error: 'AI 没有写出结果文件，稍后再试' });
+    let raw;
+    try { raw = JSON.parse(fs.readFileSync(resultPath, 'utf8')); } catch { return sendJson(res, 502, { error: 'AI 结果不是合法 JSON，稍后再试' }); }
+
+    const v = validateOutfitAiResult(raw, clothes);
+    if (!v.ok) return sendJson(res, 502, { error: `AI 选的衣服对不上档案：${v.issues.join('；')}` });
+
+    // 视觉复核（默认关；开启则二次调用，附所选衣服照片，只看选中的几件）
+    if (meta.visualReview) {
+      const imgArgs = v.draft.itemIds.flatMap((id) => {
+        const c = clothes.find((x) => x.id === id);
+        return c?.productImage ? ['-i', path.join(DATA_DIR, c.productImage)] : [];
+      });
+      if (imgArgs.length) {
+        fs.writeFileSync(path.join(dir, 'review-schema.json'), JSON.stringify({
+          type: 'object', additionalProperties: false, required: ['note'],
+          properties: { note: { type: 'string' } },
+        }));
+        try {
+          await runCodex(dir, imgArgs, '看附图这几件衣服的搭配效果，给一两句直观复核意见（好看在哪/哪里怪），只输出符合 schema 的 JSON。', '视觉复核', { schemaFile: 'review-schema.json', outFile: 'review-result.json' });
+          const rp = path.join(dir, 'review-result.json');
+          if (fs.existsSync(rp)) {
+            const rv = JSON.parse(fs.readFileSync(rp, 'utf8'));
+            if (rv?.note && String(rv.note).trim()) v.draft.visualNote = String(rv.note).trim().slice(0, 300);
+          }
+        } catch (e) {
+          v.draft.visualNote = `（视觉复核没跑成：${e.message}）`;
+        }
+      }
+    }
+
+    writeMeta(params.id, { ...meta, status: 'done', finishedAt: now() });
+    sendJson(res, 200, { draft: v.draft, issues: v.issues });
+  } finally {
+    runningTasks.delete(params.id);
+  }
+});
+
+// --- 问 ChatGPT（二期④）---
+// 只发文字：衣柜文字卡 + 问题；回答仅供浏览，不写任何数据
+api.post('/api/ask-tasks', async (req, res, { body }) => {
+  const question = typeof body.question === 'string' ? body.question.trim().slice(0, 200) : '';
+  if (!question) return sendJson(res, 400, { error: '先在搜索框里说句话' });
+  const taskId = `t-${shortId()}`;
+  const dir = path.join(TASKS_DIR, taskId);
+  fs.mkdirSync(dir, { recursive: true });
+  writeMeta(taskId, { taskId, status: 'ready', createdAt: now(), question });
+  sendJson(res, 201, { taskId });
+});
+
+api.post('/api/ask-tasks/:id/run', async (req, res, { params }) => {
+  const dir = taskDirOf(params.id);
+  const meta = readMeta(params.id);
+  if (!dir || !meta) return sendJson(res, 404, { error: '问题任务不存在' });
+  if (meta.status === 'done') return sendJson(res, 400, { error: '这个问题已经问过，再问请重新发起' });
+  if (runningTasks.has(params.id)) return sendJson(res, 409, { error: '正在回答，稍等' });
+  runningTasks.add(params.id);
+  try {
+    const clothes = store.read('clothes');
+    fs.writeFileSync(path.join(dir, 'context.md'), makeAskContext(clothes, meta.question));
+    fs.writeFileSync(path.join(dir, 'schema.json'), JSON.stringify(buildAskSchema(), null, 2));
+    await runCodex(dir, [], buildAskPrompt(), '问 ChatGPT');
+    const resultPath = path.join(dir, 'result.json');
+    if (!fs.existsSync(resultPath)) return sendJson(res, 502, { error: 'AI 没有写出结果文件，稍后再试' });
+    let raw;
+    try { raw = JSON.parse(fs.readFileSync(resultPath, 'utf8')); } catch { return sendJson(res, 502, { error: 'AI 结果不是合法 JSON，稍后再试' }); }
+    writeMeta(params.id, { ...meta, status: 'done', finishedAt: now() });
+    sendJson(res, 200, validateAskResult(raw, clothes));
+  } finally {
+    runningTasks.delete(params.id);
+  }
+});
+
+// 剪贴板兜底：codex 不可用时，把完整提示词（回答指引 + 问题 + 衣柜文字卡）给出去，自己粘到 ChatGPT 网页问
+api.get('/api/ask-tasks/:id/context', (req, res, { params }) => {
+  const dir = taskDirOf(params.id);
+  const meta = readMeta(params.id);
+  if (!dir || !meta) return sendJson(res, 404, { error: '问题任务不存在' });
+  const file = path.join(dir, 'context.md');
+  if (!fs.existsSync(file)) return sendJson(res, 404, { error: '上下文还没生成' });
+  res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' });
+  res.end(`${buildAskPrompt()}\n\n${fs.readFileSync(file, 'utf8')}`);
+});
 
 // --- 套搭 ---
 api.get('/api/outfits', (req, res, { query }) => {

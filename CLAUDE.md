@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目状态
 
-**一期已验收（2026-11-14）；二期①买前比对 + ②AI 标注员已实现并验收（2026-11-17）**。`方案总结.md` 仍是唯一事实来源，所有产品决策以它为准，动新功能前先读它。
+**一期已验收（2026-11-14）；二期四项全部完成并验收（2026-11-18 收官）**。`方案总结.md` 仍是唯一事实来源，所有产品决策以它为准，动新功能前先读它。
 
 - 启动：`npm start`（即 `node server.js`）→ http://localhost:4173
 - 测试：`npm test`（Node 内置 `node --test`，覆盖词表校验 / 自然语言解析 / 过滤 / 存储）
@@ -14,20 +14,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 方案变更时需同步三个文件：`方案总结.md`（事实来源）→ `产品方案.html`（可视化阅读页）→ 本文件。
 
-## 进度快照（2026-11-18，动工前先看这节）
+## 进度快照（2026-11-18 二期收官，动工前先看这节）
 
-**一期已完成并验收；二期①买前比对 + ②AI 标注员已完成（codex 直调通道落地，真实冒烟全过）**：
+**一期已完成并验收；二期四项全部完成（买前比对 / AI 标注员 / AI 搭配 / 问 ChatGPT，codex 直调通道，各项真实冒烟全过）**：
 
 - 2026-11-14 一期初版：录入/衣柜网格/尺码档案/搭配板/套搭过滤/本地自然语言搜索/避雷清单 + 27 项测试 + 19 项 API 端到端验收。
 - 2026-11-15 一期迭代：图片选择弹窗（`openClothesPicker`）；套搭温度带/场景可选；套搭详情页；尺码对比同类基准匹配；站名 Koala Closet。
 - 2026-11-17 二期① v1：待买区（手动录入 + 本地查重/对照/配几套），38 测 + 38 e2e 全绿。
 - 2026-11-17 二期① v2（**按小迪反馈返工，当前形态**）：撤销待买区导航与手动录入——**买前比对工作台** `#/compare`（页头「＋ 买前比对」入口）：丢淘宝截图（1~8 张）→ **codex CLI 按钮直调**（`POST /api/precheck-tasks` 建任务文件夹 `data/ai-tasks/<id>/` → `POST .../run` spawn codex `-i` 附图）→ AI 提取描述卡/尺寸表 + 结论四件套（建议码/查重/搭配面/一句话）→ `lib/aitask.js` 校验（schema enum + `validateAiResult` 词表复核，词表外值置空记 `aiIssues`）→ 生成待买档案（详情页「AI 结论」区块 + 本地对照印证）→ 转正（宽严两档：`validateClothes` 对待买放词表缺口、promote 前严校验逼补齐）/ 丢掉（连任务文件夹清掉）。**已装 codex CLI**（npm 全局 @openai/codex，复用桌面版登录态 gpt-6-astra）。46 项单元测试 + 22 项 mock e2e + 真实 codex 冒烟（145s 全链路含转正拦截闭环）全绿。
+- 2026-11-18 二期收官 **③AI 帮忙搭配 + ④问 ChatGPT**：套搭页顶部「AI 帮我搭」（`#/outfits`）——温度带/场景/附加要求 + ☑口味参考（**每次先问默认不发**）+ ☑视觉复核（**默认关**，开启则 runCodex 二次调用附所选衣服照片，`runCodex` 加 `schemaFile/outFile` 参数防覆盖）；**避雷清单总是作负面偏好进 context**；取材优先级（用户要求>已存套搭>轻量原则>自由发挥）写死在 `buildOutfitPrompt`；产出是**未存档草稿**，「存为套搭」才落库；「不喜欢」点标签即记避雷（kind 套搭）并**自动换一套**（被否组合+理由进重跑 context）。问 AI：搜索条旁按钮 → `POST /api/ask-tasks`（衣柜文字卡+问题）→ 回答+命中衣服在衣柜页原地展示，不写数据；codex 失败「复制提示词」兜底（`GET /api/ask-tasks/:id/context` 返回完整提示词）。`lib/aitask.js` 提取 `wardrobeCardsMd()` 共用素材。真实冒烟：搭配 50s（含复核，AI 呼应附加要求、复核给反向建议）、问 AI 25s（个性化回答+4 件命中）。56 项单测 + 21 项 mock e2e 全绿。
 - 2026-11-18 补跑 **AI 标注员真实 codex 冒烟，全过**：单张预填 26s（假商品页信息全提对、页上没有的字段如实 null）、批量体检 17s（补空/纠错分类正确）。同日发现并修掉一个环境坑：**小迪的代理是「系统代理」模式，终端/spawn 的 codex 不走**——server 端 `codexEnv()` 现在会用 `scutil --proxy` 自动探测系统代理注入 HTTPS_PROXY（已有环境变量则尊重），买前比对与标注员共用 `runCodex()` 公共 spawn（重构自两处重复代码）。
 - 2026-11-17 二期②**AI 标注员**（复用 ① 的 codex 直调通道）：**新录入预填**——editor 图片组「AI 预填描述卡」按钮（`rerenderVocab` 注册表刷新 pills）；**存量体检**——`#/annotate`（toc「AI 标注」）勾 ≤12 件 → AI 看商品图按词表给建议 → `validateAnnotateResult` 按**当前卡值**分两类：补空（默认勾）/ 疑似不符（默认不勾，主动勾才改）→ 逐件应用走 PUT（应用后仍缺必填则拦下指路编辑页）。端点 `POST /api/annotate-tasks`（批量 itemIds / 单张 imageB64 / 已有档案 itemId）+ `/run`。安全口径：名称/品牌改动不建议、词表外值剔除留痕、AI 不默默改数据。51 项单元测试 + 18 项 mock e2e 全绿。
 - 2026-11-17 拍板（方案第 5 节）：**AI 搭配口味参考 = 每次先问、默认不发；避雷清单 = 喂给 AI 当负面偏好**。
 - 途中修复的坑（新代码别再犯）：`el()` 单顶级/`els()` 多顶级；换图同名覆盖勿删旧图；`node --test` 不带目录参数；**测试服务核对进程 cwd 与端口**（`kill %1` 不跨 shell、端口被占新服务静默失败）；**spawn codex 三条命脉**——① 监听 `exit` 而非 execFile 回调（codex 沙箱子进程攥着 stdio 管道，close 会挂到超时）② `stdin:'ignore'`（非 tty stdin 会让 codex 等输入）③ `-i` 路径必须带扩展名；**OpenAI 严格 schema**：可空用 `anyOf [{...},{type:'null'}]`、不许自由 key 的 map（部位固定枚举 + null 值，`lib/aitask.js` 的 `MEASUREMENT_PARTS`）；`cp a b dir/` 会把 a、b 平铺进 dir（多个源不会保子目录结构）；**el\` 模板赋值语句结尾是 \`; 不是 \`);**（append 才带括号，写岔了报错行号会指到别处）；绝对定位的 checkbox 要 `z-index` 盖过后面 relative 的兄弟节点。
 
-**待办**：二期剩两项——③ AI 搭配 → ④ 问 ChatGPT（沿用 codex 直调通道 `runCodex()`；口味参考/避雷口径已定）；让小迪用真实淘宝截图试买前比对 + 录真实衣服用 AI 预填攒反馈。小尾巴：套搭详情页不能补标温度带/场景/标题；无数据备份机制（手动拷 `data/`）。
+**待办**：二期已收官。剩下的都是使用与打磨：让小迪录真实衣服（AI 预填提效）、真实淘宝截图试买前比对、日常用 AI 搭配攒口味数据与反馈。小尾巴：套搭详情页不能补标温度带/场景/标题；无数据备份机制（手动拷 `data/`——衣服录多了建议优先做）。讨论过未拍板的（退货倒计时/旅行打包/穿着频率/穿着记录/换季收纳）仍不做。
 
 本项目是 git 仓库（2026-11-16 init，远程 `git@github.com:pipony/KoalaCloset.git`，HTTPS 不通走 SSH）。`data/` 已在 `.gitignore`——**私人档案与图片永不入库**，重要数据靠手动备份 `data/` 文件夹。完成功能后随手 commit + push，并更新本快照。
 

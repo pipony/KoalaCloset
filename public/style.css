@@ -428,3 +428,14 @@ footer{margin-top:64px;text-align:center;font-size:11px;letter-spacing:.4em;colo
 @media (prefers-reduced-motion: reduce){
   .masthead,.item{animation:none;opacity:1;transform:none}
 }
+
+/* ---------- AI 搭配台 / 问 AI ---------- */
+.searchbar #ask-ai{margin:0 4px;flex:none}
+.ai-draft .pieces{margin-top:14px}
+.ai-piece{display:flex;flex-direction:column;gap:7px;width:118px;text-decoration:none;color:var(--ink)}
+.ai-piece .f{height:110px;border:1px solid var(--hair);background:#FDFCF9;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;transition:.2s}
+.ai-piece:hover .f{border-color:var(--ink)}
+.ai-piece .f img{max-width:88%;max-height:88%;object-fit:contain}
+.ai-piece .f svg{width:56px;height:56px}
+.ai-piece span{font-size:11px;letter-spacing:.06em;line-height:1.7}
+.ask-panel{border-left:2px solid var(--accent)}

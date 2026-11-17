@@ -2,7 +2,7 @@
 // chips 与 subcats 双向同步；条件变化即重新查询（服务端过滤）
 
 import { api } from '../api.js';
-import { el, esc, clothesCard, openPopover, closePopover, poItem, boardAdd, boardDraft, toast, vocab } from '../components.js';
+import { el, esc, clothesCard, openPopover, closePopover, poItem, boardAdd, boardDraft, toast, vocab, figureInner, noLabel } from '../components.js';
 import { state } from '../app.js';
 
 const VOCAB_KEYS = ['color', 'pattern', 'thickness', 'fit', 'length', 'neckline', 'fabric', 'elastic'];
@@ -22,9 +22,10 @@ export async function wardrobe(view) {
   // —— 挂载结构 ——
   const subcats = el`<div class="subcats"></div>`;
   const chipsWrap = el`<div class="chips-row" id="chips"></div>`;
+  const askWrap = el`<div id="ask-wrap"></div>`;
   const runhead = el`<div class="runhead"><h2>本期衣柜</h2><span></span></div>`;
   const grid = el`<div class="grid"></div>`;
-  view.append(subcats, chipsWrap, runhead, grid);
+  view.append(subcats, chipsWrap, askWrap, runhead, grid);
 
   // —— 全局搜索条带来的待处理查询 ——
   if (state.pendingQuery) {
@@ -32,6 +33,66 @@ export async function wardrobe(view) {
     cond = r.cond;
     unknown = r.unknown;
     state.pendingQuery = null;
+  }
+
+  // —— 「问 AI」带来的待处理问题（手动点击才联网；只发衣柜文字卡 + 问题） ——
+  if (state.pendingAsk) {
+    const q = state.pendingAsk;
+    state.pendingAsk = null;
+    runAsk(q);
+  }
+
+  async function runAsk(question) {
+    askWrap.innerHTML = '';
+    const panel = el`<div class="form-section ask-panel">
+      <div class="fs-head"><h3>问 AI：${esc(question)}</h3><span class="fs-no">ASK CHATGPT · 只发文字卡</span></div>
+      <p class="muted" id="ask-body" style="font-size:13px;letter-spacing:.06em">AI 正在翻衣柜…（约半分钟）</p>
+    </div>`;
+    askWrap.append(panel);
+    const body = panel.querySelector('#ask-body');
+    let taskId = null;
+    try {
+      const t = await api.createAskTask(question);
+      taskId = t.taskId;
+      const r = await api.runAskTask(t.taskId);
+      renderAskAnswer(panel, r);
+    } catch (e) {
+      body.innerHTML = '';
+      const errLine = el`<p style="font-size:13px;color:var(--accent);letter-spacing:.04em;line-height:2">${esc(e.message)}</p>`;
+      const fallback = el`<button type="button" class="btn sm">复制提示词，自己去 ChatGPT 网页问</button>`;
+      if (taskId) {
+        fallback.addEventListener('click', async () => {
+          try {
+            const text = await api.askContext(taskId);
+            await navigator.clipboard.writeText(text);
+            toast('提示词已复制（含衣柜文字卡）——粘到 ChatGPT 里问吧');
+          } catch (err2) { toast(`复制失败：${err2.message}`, true); }
+        });
+      } else {
+        fallback.disabled = true;
+      }
+      body.append(errLine, fallback);
+    }
+  }
+
+  function renderAskAnswer(panel, r) {
+    const body = panel.querySelector('#ask-body');
+    body.innerHTML = '';
+    body.append(el`<p style="font-size:13.5px;letter-spacing:.03em;line-height:2;margin:0 0 4px">${esc(r.answer)}</p>`);
+    if (r.items.length) {
+      const row = el`<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:12px"></div>`;
+      for (const c of r.items) {
+        const card = el`<a href="#/item/${c.id}" class="ai-piece" title="${esc(c.name)}">
+          <div class="f">${figureInner(c)}</div>
+          <span>NO.${noLabel(c)} ${esc(c.name)}</span>
+        </a>`;
+        row.append(card);
+      }
+      body.append(row);
+    }
+    const closeBtn = el`<button type="button" class="btn sm" style="margin-top:14px">收起</button>`;
+    closeBtn.addEventListener('click', () => { askWrap.innerHTML = ''; });
+    body.append(closeBtn);
   }
 
   async function refresh(reopenField = null) {

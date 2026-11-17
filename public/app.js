@@ -20,6 +20,7 @@ const ROUTES = {
 
 export const state = {
   pendingQuery: null, // 全局搜索条 → 衣柜页消费一次
+  pendingAsk: null,   // 「问 AI」按钮 → 衣柜页消费一次并拉起问答面板
 };
 
 function parseHash() {
@@ -52,6 +53,15 @@ document.getElementById('searchbar').addEventListener('keydown', (e) => {
   const text = e.target.value.trim();
   if (!text) return;
   state.pendingQuery = text;
+  if (parseHash().route !== 'wardrobe') location.hash = '#/wardrobe';
+  else render();
+});
+
+// 「问 AI」：本地搜索兜底入口——手动点击才联网，只发衣柜文字卡 + 问题
+document.getElementById('ask-ai').addEventListener('click', () => {
+  const text = document.getElementById('search-input').value.trim();
+  if (!text) return toast('先在搜索框里说句话，再点问 AI', true);
+  state.pendingAsk = text;
   if (parseHash().route !== 'wardrobe') location.hash = '#/wardrobe';
   else render();
 });

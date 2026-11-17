@@ -16,6 +16,11 @@ const clothes = [
     styles: ['休闲'], isBaseline: false, sizeChart: [],
   },
   {
+    id: 'c3', no: 3, name: '牛仔直筒裤', brand: 'LEVIS', category: '下装', sub: '长裤', status: '在衣柜',
+    color: '蓝', pattern: '纯色', thickness: '中', fit: '合身', length: '常规',
+    fabric: '牛仔', elastic: '微弹', styles: ['通勤', '休闲'], sizeChart: [],
+  },
+  {
     id: 'w1', no: null, name: '另一件待比对的', category: '上装', sub: '长袖', status: '待买',
     color: '白', styles: [], sizeChart: [],
   },
@@ -203,4 +208,72 @@ test('validateAnnotateResult：全一致 + 无可填 → 不产出该件', () =>
   };
   const r = validateAnnotateResult(raw, annItems);
   assert.equal(r.length, 0); // 与当前值全一致（thickness 也认不出 → null），无事可做
+});
+
+// —— AI 搭配 & 问 ChatGPT ——
+import { makeOutfitContext, buildOutfitPrompt, buildOutfitSchema, validateOutfitAiResult, makeAskContext, buildAskPrompt, buildAskSchema, validateAskResult } from '../lib/aitask.js';
+
+test('makeOutfitContext：温度带建议/口味参考按勾选/避雷总在/被否上一套', () => {
+  const base = makeOutfitContext(clothes, { tempBand: '舒适', scenes: ['通勤'], note: '想显利落' });
+  assert.ok(base.includes('建议厚薄'));                    // TEMP_THICKNESS 映射进上下文
+  assert.ok(base.includes('未提供——别猜她的口味'));          // 默认不带口味参考
+  assert.ok(base.includes('暂无避雷记录'));                  // 空避雷也占位
+  assert.ok(base.includes('想显利落'));                     // 用户要求最高优先
+
+  const withTaste = makeOutfitContext(clothes, {
+    tasteRef: true,
+    savedOutfits: [{ title: '衬衫通勤日', itemIds: ['c1', 'c2'], tempBand: '舒适', scenes: ['通勤'] }],
+    avoidlist: [{ kind: '单品', itemIds: ['c2'], reasons: ['感觉重复'], comment: '太像了' }],
+    avoid: { itemIds: ['c1', 'c2'], reasonText: '太正式' },
+  });
+  assert.ok(withTaste.includes('衬衫通勤日'));               // 勾选才带口味参考
+  assert.ok(withTaste.includes('白色棉麻衬衫'));             // 套搭成员展开
+  assert.ok(withTaste.includes('她不喜欢的'));
+  assert.ok(withTaste.includes('太像了'));
+  assert.ok(withTaste.includes('刚被否掉的一套'));           // 换一套的排除上下文
+});
+
+test('buildOutfitPrompt：优先级与约束都在', () => {
+  const p = buildOutfitPrompt();
+  for (const key of ['用户这次明确提出的要求', '已存套搭', '轻量原则', '自由发挥', '2~5 件', '避雷', '不要原样重来']) {
+    assert.ok(p.includes(key), `缺 ${key}`);
+  }
+});
+
+test('buildOutfitSchema：严格模式形状', () => {
+  const s = buildOutfitSchema();
+  assert.deepEqual(s.required, ['title', 'itemIds', 'reason', 'visualNote']);
+  assert.equal(s.properties.itemIds.minItems, 2);
+  assert.equal(s.properties.itemIds.maxItems, 5);
+  assert.deepEqual(s.properties.visualNote, { anyOf: [{ type: 'string' }, { type: 'null' }] });
+});
+
+test('validateOutfitAiResult：无效 id 剔除/去重/不足 2 件判废/缺大类 warning', () => {
+  const ok = validateOutfitAiResult({ title: '通勤日', itemIds: ['c1', 'c3', 'c1', 'nope', 'w1'], reason: '配色稳重' }, clothes);
+  assert.equal(ok.ok, true);
+  assert.deepEqual(ok.draft.itemIds, ['c1', 'c3']);        // 无效引用与待买 id 剔除、去重
+  assert.equal(ok.draft.warning, null);                     // 上装 c1 + 下装 c3 → 齐
+  assert.ok(ok.issues.some((i) => i.includes('nope')));
+
+  const bad = validateOutfitAiResult({ title: 'x', itemIds: ['nope'], reason: '' }, clothes);
+  assert.equal(bad.ok, false);
+
+  const noBottom = validateOutfitAiResult({ title: 'x', itemIds: ['c1', 'c2'], reason: 'x' }, clothes);
+  assert.equal(noBottom.draft.warning, '这套没有同时包含上装和下装——可以存，但建议看一眼');
+});
+
+test('ask 三件套：context/prompt/schema/校验', () => {
+  const ctx = makeAskContext(clothes, '有哪些显瘦的上衣？');
+  assert.ok(ctx.includes('显瘦的上衣'));
+  assert.ok(ctx.includes('id:c1'));
+  assert.ok(buildAskPrompt().includes('不要编 id'));
+  const s = buildAskSchema();
+  assert.deepEqual(s.required, ['answer', 'itemIds']);
+
+  const r = validateAskResult({ answer: '白衬衫最显瘦，牛仔裤也直筒。', itemIds: ['c1', 'c3', 'c3', 'fake', 'w1'] }, clothes);
+  assert.ok(r.answer.includes('白衬衫'));
+  assert.deepEqual(r.items.map((c) => c.id), ['c1', 'c3']); // 去重 + 剔无效 + 剔待买
+  const empty = validateAskResult({}, clothes);
+  assert.ok(empty.answer.includes('没有给出'));
+  assert.deepEqual(empty.items, []);
 });

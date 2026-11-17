@@ -1,7 +1,7 @@
-// 套搭列表：温度带 + 场景过滤（离线主路径）→ 套搭行（缩略拼条 / 复刻 / 删除）
+// 套搭列表：AI 帮我搭（联网，手动触发）+ 温度带/场景过滤已存套搭（离线主路径）
 
 import { api } from '../api.js';
-import { el, esc, vocab, boardSet, toast } from '../components.js';
+import { el, esc, vocab, boardSet, toast, figureInner, noLabel } from '../components.js';
 
 export async function outfits(view) {
   const v = await vocab();
@@ -10,7 +10,158 @@ export async function outfits(view) {
   const filters = el`<div class="filters"></div>`;
   const runhead = el`<div class="runhead"><h2>套搭专栏</h2><span>OUTFITS</span></div>`;
   const list = el`<div></div>`;
-  view.append(filters, runhead, list);
+
+  // —— AI 帮我搭（点按钮才联网；发送内容常显说明） ——
+  const aiForm = { tempBand: null, scenes: [], note: '', tasteRef: false, visualReview: false };
+  const aiBench = el`<div class="form-section" id="ai-bench">
+    <div class="fs-head"><h3>AI 帮我搭</h3><span class="fs-no">AI STYLIST · 手动触发</span></div>
+    <div class="frow" style="align-items:center;gap:10px;flex-wrap:wrap">
+      <label style="font-size:11px;letter-spacing:.28em;color:var(--ink-2)">温度带</label>
+      <div class="pills" id="ai-temp"></div>
+    </div>
+    <div class="frow" style="align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px">
+      <label style="font-size:11px;letter-spacing:.28em;color:var(--ink-2)">场景</label>
+      <div class="pills" id="ai-scenes"></div>
+    </div>
+    <div class="frow" style="margin-top:14px">
+      <div class="field" style="flex:1;min-width:260px"><label>附加要求（可空，最高优先）</label>
+        <input type="text" id="ai-note" placeholder="如：想显利落一点 / 不要牛仔裤 / 见客户"></div>
+    </div>
+    <div class="frow" style="align-items:center;gap:20px;flex-wrap:wrap;margin-top:6px">
+      <label style="cursor:pointer;font-size:12.5px;letter-spacing:.04em"><input type="checkbox" id="ai-taste"> 带上我的套搭当口味参考（每次先问，默认不发）</label>
+      <label style="cursor:pointer;font-size:12.5px;letter-spacing:.04em"><input type="checkbox" id="ai-visual"> 视觉复核（开启会发送所选衣服的照片，默认关）</label>
+    </div>
+    <div class="btnline" style="margin-top:16px">
+      <button type="button" class="btn primary" id="ai-run">AI 出一套</button>
+      <span class="muted" style="font-size:12px;letter-spacing:.08em">发送：衣柜文字卡 + 避雷清单 +（勾选时）已存套搭或照片 · 约半分钟</span>
+    </div>
+    <div class="form-error" id="ai-err" style="margin-top:12px"></div>
+  </div>`;
+  const aiResult = el`<div id="ai-result"></div>`;
+
+  const tempPills = aiBench.querySelector('#ai-temp');
+  const mkTemp = el`<span class="pill">不限</span>`;
+  mkTemp.addEventListener('click', () => {
+    aiForm.tempBand = null;
+    renderAiPills();
+  });
+  tempPills.append(mkTemp);
+  for (const b of v.tempBands) {
+    const p = el`<span class="pill">${b}</span>`;
+    p.addEventListener('click', () => { aiForm.tempBand = aiForm.tempBand === b ? null : b; renderAiPills(); });
+    tempPills.append(p);
+  }
+  const scenePills = aiBench.querySelector('#ai-scenes');
+  for (const s of v.scenes) {
+    const p = el`<span class="pill">${s}</span>`;
+    p.addEventListener('click', () => {
+      const i = aiForm.scenes.indexOf(s);
+      if (i === -1) aiForm.scenes.push(s); else aiForm.scenes.splice(i, 1);
+      renderAiPills();
+    });
+    scenePills.append(p);
+  }
+  function renderAiPills() {
+    [...tempPills.children].forEach((p) => p.classList.toggle('on', aiForm.tempBand === null ? p.textContent === '不限' : p.textContent === aiForm.tempBand));
+    [...scenePills.children].forEach((p) => p.classList.toggle('on', aiForm.scenes.includes(p.textContent)));
+  }
+  aiBench.querySelector('#ai-taste').addEventListener('change', (e) => { aiForm.tasteRef = e.target.checked; });
+  aiBench.querySelector('#ai-visual').addEventListener('change', (e) => { aiForm.visualReview = e.target.checked; });
+  aiBench.querySelector('#ai-note').addEventListener('input', (e) => { aiForm.note = e.target.value; });
+  renderAiPills();
+
+  const aiRunBtn = aiBench.querySelector('#ai-run');
+  const aiErr = aiBench.querySelector('#ai-err');
+  async function runAi(avoid = null, btnLabel = 'AI 出一套') {
+    aiErr.classList.remove('show');
+    aiRunBtn.disabled = true;
+    aiRunBtn.textContent = 'AI 正在翻衣柜，约半分钟…';
+    aiResult.innerHTML = '';
+    aiResult.append(el`<p class="muted" style="font-size:13px;letter-spacing:.08em;padding:8px 2px">${btnLabel === 'AI 出一套' ? 'AI 正在挑衣服…' : '换一套中…'}</p>`);
+    try {
+      const t = await api.createOutfitTask({ ...aiForm, avoid });
+      const r = await api.runOutfitTask(t.taskId);
+      renderAiDraft(r.draft);
+    } catch (e) {
+      aiResult.innerHTML = '';
+      aiErr.textContent = e.message;
+      aiErr.classList.add('show');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } finally {
+      aiRunBtn.disabled = false;
+      aiRunBtn.textContent = 'AI 出一套';
+    }
+  }
+  aiRunBtn.addEventListener('click', () => runAi());
+
+  function renderAiDraft(draft) {
+    aiResult.innerHTML = '';
+    const card = el`<div class="form-section ai-draft"></div>`;
+    card.append(el`<div class="fs-head"><h3>${esc(draft.title)}</h3><span class="fs-no">AI DRAFT · 未存档</span></div>`);
+    const pieces = el`<div class="pieces" style="display:flex;gap:12px;flex-wrap:wrap"></div>`;
+    for (const it of draft.items) {
+      pieces.append(el`<a href="#/item/${it.id}" class="ai-piece" title="${esc(it.name)}">
+        <div class="f">${figureInner(it)}</div>
+        <span>NO.${noLabel(it)} ${esc(it.name)}</span>
+      </a>`);
+    }
+    card.append(pieces);
+    card.append(el`<p style="font-size:13.5px;letter-spacing:.04em;line-height:2;margin:14px 0 0">${esc(draft.reason)}</p>`);
+    if (draft.visualNote) card.append(el`<p class="muted" style="font-size:12.5px;letter-spacing:.04em;line-height:2;margin:8px 0 0">视觉复核：${esc(draft.visualNote)}</p>`);
+    if (draft.warning) card.append(el`<p style="font-size:12.5px;color:var(--accent);letter-spacing:.04em;margin:8px 0 0">${esc(draft.warning)}</p>`);
+
+    const acts = el`<div class="btnline" style="margin-top:16px">
+      <button type="button" class="btn primary" data-a="save">存为套搭</button>
+      <button type="button" class="btn" data-a="dislike">不喜欢</button>
+      <button type="button" class="btn" data-a="reroll">换一套</button>
+      <button type="button" class="btn sm" data-a="drop">丢弃</button>
+    </div>`;
+    card.append(acts);
+
+    // 「不喜欢 + 一句话」（方案 3.7）：点标签即记避雷并立刻换一套
+    const dislikePanel = el`<div class="ann-rows" style="display:none;margin-top:14px"></div>`;
+    dislikePanel.append(el`<p class="muted" style="font-size:12.5px;letter-spacing:.06em;margin-bottom:10px">点一个理由就算记下——自动进避雷清单，并马上换一套避开这个问题。</p>`);
+    const tagRow = el`<div class="pills"></div>`;
+    const cmt = el`<input type="text" placeholder="再补一句（可空）" style="margin-top:10px">`;
+    for (const r of v.avoidReasons) {
+      const tag = el`<button type="button" class="pill">${r}</button>`;
+      tag.addEventListener('click', async () => {
+        try {
+          await api.createAvoid({
+            kind: '套搭', itemIds: draft.itemIds, reasons: [r],
+            comment: cmt.value.trim() || null,
+            tempBand: aiForm.tempBand, scenes: aiForm.scenes,
+          });
+          toast('记下了，换一套');
+        } catch (e) { toast(`避雷没记上：${e.message}`, true); }
+        dislikePanel.style.display = 'none';
+        runAi({ itemIds: draft.itemIds, reasonText: `${r}${cmt.value.trim() ? `——${cmt.value.trim()}` : ''}` }, '换一套');
+      });
+      tagRow.append(tag);
+    }
+    dislikePanel.append(tagRow, cmt);
+    card.append(dislikePanel);
+
+    acts.querySelector('[data-a=save]').addEventListener('click', async () => {
+      try {
+        await api.createOutfit({
+          title: draft.title, itemIds: draft.itemIds,
+          tempBand: aiForm.tempBand, scenes: aiForm.scenes,
+        });
+        toast('已存为套搭');
+        aiResult.innerHTML = '';
+        load();
+      } catch (e) { toast(e.message, true); }
+    });
+    acts.querySelector('[data-a=dislike]').addEventListener('click', () => {
+      dislikePanel.style.display = dislikePanel.style.display === 'none' ? 'block' : 'none';
+    });
+    acts.querySelector('[data-a=reroll]').addEventListener('click', () => runAi(null, '换一套'));
+    acts.querySelector('[data-a=drop]').addEventListener('click', () => { aiResult.innerHTML = ''; });
+    aiResult.append(card);
+  }
+
+  view.append(runhead, aiBench, aiResult, el`<div style="height:34px"></div>`, filters, list);
 
   function renderFilters() {
     filters.innerHTML = '';

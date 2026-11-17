@@ -33,6 +33,11 @@ export const api = {
   runPrecheckTask: (taskId) => request('POST', `/api/precheck-tasks/${taskId}/run`),
   createAnnotateTask: (data) => request('POST', '/api/annotate-tasks', data),
   runAnnotateTask: (taskId) => request('POST', `/api/annotate-tasks/${taskId}/run`),
+  createOutfitTask: (data) => request('POST', '/api/outfit-tasks', data),
+  runOutfitTask: (taskId) => request('POST', `/api/outfit-tasks/${taskId}/run`),
+  createAskTask: (question) => request('POST', '/api/ask-tasks', { question }),
+  runAskTask: (taskId) => request('POST', `/api/ask-tasks/${taskId}/run`),
+  askContext: (taskId) => request('GET', `/api/ask-tasks/${taskId}/context`),
   outfits: (params = {}) => {
     const q = new URLSearchParams(Object.entries(params).filter(([, v]) => v));
     const s = q.toString();
