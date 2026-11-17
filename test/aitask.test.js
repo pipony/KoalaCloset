@@ -122,3 +122,85 @@ test('validateAiResult：字段缺省（null）不算 issue；名称缺失给兜
   assert.equal(r.card.neckline, null);
   assert.equal(r.card.name, '待比对新衣');
 });
+
+// —— AI 标注员 ——
+import { makeAnnotateContext, buildAnnotateSchema, buildAnnotatePrompt, validateAnnotateResult } from '../lib/aitask.js';
+
+const annItems = [
+  {
+    id: 'c1', no: 1, name: '白衬衫', brand: 'UNIQLO', category: '上装', sub: '长袖',
+    color: '白', pattern: '纯色', thickness: null, fit: '合身', length: '常规',
+    neckline: null, fabric: '棉', elastic: '无弹', styles: ['通勤'],
+  },
+  {
+    id: 'c2', no: 2, name: '蓝裤子', brand: null, category: '下装', sub: '长裤',
+    color: '蓝', pattern: null, thickness: '中', fit: null, length: '常规',
+    neckline: null, fabric: '牛仔', elastic: null, styles: ['通勤', '休闲'],
+  },
+];
+
+test('makeAnnotateContext：词表 + index 与当前值', () => {
+  const md = makeAnnotateContext(annItems);
+  assert.ok(md.includes('index=1'));
+  assert.ok(md.includes('NO.') || md.includes('白衬衫'));
+  assert.ok(md.includes('蓝裤子'));
+  assert.ok(md.includes('固定词表'));
+});
+
+test('buildAnnotatePrompt：讲清附图编号对应与词表约束', () => {
+  const p = buildAnnotatePrompt();
+  assert.ok(p.includes('第 1 张附图对应'));
+  assert.ok(p.includes('只能从'));
+  assert.ok(p.includes('按图给出'));
+});
+
+test('buildAnnotateSchema：严格模式自检（items 数组、全键 required、anyOf 可空）', () => {
+  const s = buildAnnotateSchema();
+  const item = s.properties.items.items;
+  assert.equal(item.additionalProperties, false);
+  assert.ok(item.required.includes('brand'));
+  assert.ok(item.required.includes('styles'));
+  assert.equal(item.properties.color.anyOf[1].type, 'null');
+  assert.equal(item.properties.styles.maxItems, 2);
+  assert.equal(item.properties.index.type, 'number');
+});
+
+test('validateAnnotateResult：补空/纠错/一致 三分类 + index 映射 + 词表外剔除', () => {
+  const raw = {
+    items: [
+      { // c1：thickness 补空、color 纠错（白→米）、fabric 词表外剔除
+        index: 1, name: '米色衬衫', brand: 'UNIQLO', category: '上装', sub: '长袖',
+        color: '米', pattern: '纯色', thickness: '薄', fit: '合身', length: '常规',
+        neckline: '翻领', fabric: '棉麻混纺', elastic: '无弹', styles: ['通勤'],
+      },
+      { // c2：pattern/elastic 补空、styles 纠错、fit 一致
+        index: 2, name: '蓝色牛仔裤', brand: 'LEVIS', category: '下装', sub: '长裤',
+        color: '蓝', pattern: '纯色', thickness: '中', fit: null, length: '常规',
+        neckline: null, fabric: '牛仔', elastic: '微弹', styles: ['通勤'],
+      },
+      { index: 99, name: '编错号', brand: null, category: null, sub: null, color: null, pattern: null, thickness: null, fit: null, length: null, neckline: null, fabric: null, elastic: null, styles: [] },
+    ],
+  };
+  const r = validateAnnotateResult(raw, annItems);
+  assert.equal(r.length, 2); // index=99 被丢弃
+  const r1 = r.find((x) => x.itemId === 'c1');
+  assert.deepEqual(r1.fills, { thickness: '薄', neckline: '翻领' }); // 补空
+  assert.deepEqual(r1.corrections, { color: { from: '白', to: '米' } }); // 纠错
+  assert.ok(r1.issues.some((i) => i.includes('面料'))); // 棉麻混纺 不在词表
+  assert.ok(!('name' in r1.fills) && !('name' in r1.corrections)); // 名称不进建议
+  const r2 = r.find((x) => x.itemId === 'c2');
+  assert.deepEqual(r2.fills, { pattern: '纯色', elastic: '微弹', brand: 'LEVIS' });
+  assert.deepEqual(r2.corrections, { styles: { from: '通勤·休闲', to: '通勤' } });
+});
+
+test('validateAnnotateResult：全一致 + 无可填 → 不产出该件', () => {
+  const raw = {
+    items: [{
+      index: 1, name: '白衬衫', brand: 'UNIQLO', category: '上装', sub: '长袖',
+      color: '白', pattern: '纯色', thickness: null, fit: '合身', length: '常规',
+      neckline: null, fabric: '棉', elastic: '无弹', styles: ['通勤'],
+    }],
+  };
+  const r = validateAnnotateResult(raw, annItems);
+  assert.equal(r.length, 0); // 与当前值全一致（thickness 也认不出 → null），无事可做
+});

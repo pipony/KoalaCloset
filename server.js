@@ -12,7 +12,10 @@ import { createImages, parseDataUrl } from './lib/images.js';
 import { parseQuery } from './lib/nlparse.js';
 import { filterClothes, filterOutfits } from './lib/filter.js';
 import { findDuplicates, matchableOutfits } from './lib/buycheck.js';
-import { makeTaskContext, buildOutputSchema, buildTaskPrompt, validateAiResult } from './lib/aitask.js';
+import {
+  makeTaskContext, buildOutputSchema, buildTaskPrompt, validateAiResult,
+  makeAnnotateContext, buildAnnotateSchema, buildAnnotatePrompt, validateAnnotateResult,
+} from './lib/aitask.js';
 import {
   validateClothes, validateOutfit, validateAvoid, publicVocab, TEMP_BANDS, SCENES, TEMP_THICKNESS,
 } from './lib/vocab.js';
@@ -365,6 +368,122 @@ api.post('/api/precheck-tasks/:id/run', async (req, res, { params }) => {
     await store.save('clothes', list);
     writeMeta(params.id, { ...meta, status: 'done', clothId: item.id, finishedAt: now() });
     sendJson(res, 201, { cloth: item, issues: v.issues });
+  } finally {
+    runningTasks.delete(params.id);
+  }
+});
+
+// --- AI 标注员（二期②：描述卡预填 + 存量体检，与买前比对共用任务文件夹/防并发/spawn 规矩） ---
+// 建任务三种入参：{ itemIds: [...] } 批量体检（≤12，直接引用 data/images 原图）；{ imageB64 } 新录入单张预填；{ itemId } 编辑已有档案用已存图
+api.post('/api/annotate-tasks', async (req, res, { body }) => {
+  const taskId = `t-${shortId()}`;
+  const dir = path.join(TASKS_DIR, taskId);
+  let meta;
+
+  if (Array.isArray(body.itemIds) && body.itemIds.length > 0) {
+    if (body.itemIds.length > 12) return sendJson(res, 400, { error: '一批最多 12 件（额度分批口径）' });
+    const clothes = store.read('clothes');
+    const items = [];
+    for (const id of body.itemIds) {
+      const c = clothes.find((x) => x.id === id && (x.status || '在衣柜') === '在衣柜');
+      if (!c || !c.productImage) continue; // 没商品图没法标注，跳过
+      items.push({ index: items.length + 1, itemId: c.id, name: c.name, imageRel: c.productImage });
+    }
+    if (items.length === 0) return sendJson(res, 400, { error: '选的衣服都不在衣柜或没有商品图' });
+    fs.mkdirSync(dir, { recursive: true });
+    meta = { taskId, status: 'ready', mode: 'batch', createdAt: now(), items };
+  } else if (body.imageB64) {
+    try {
+      fs.mkdirSync(path.join(dir, 'images'), { recursive: true });
+      const { buf, ext } = parseDataUrl(body.imageB64);
+      fs.writeFileSync(path.join(dir, 'images', `01.${ext}`), buf);
+    } catch (e) {
+      fs.rmSync(dir, { recursive: true, force: true });
+      return sendJson(res, 400, { error: e.message });
+    }
+    meta = { taskId, status: 'ready', mode: 'single', createdAt: now(), shotFiles: ['01'] };
+  } else if (body.itemId) {
+    const c = store.read('clothes').find((x) => x.id === body.itemId);
+    if (!c || !c.productImage) return sendJson(res, 400, { error: '这件没有商品图，没法预填' });
+    fs.mkdirSync(dir, { recursive: true });
+    meta = { taskId, status: 'ready', mode: 'single', createdAt: now(), items: [{ index: 1, itemId: c.id, name: c.name, imageRel: c.productImage }] };
+  } else {
+    return sendJson(res, 400, { error: '传 itemIds（批量体检）、imageB64（新录入预填）或 itemId（已有档案预填）' });
+  }
+
+  writeMeta(taskId, meta);
+  sendJson(res, 201, { taskId, mode: meta.mode, count: meta.items?.length || 1 });
+});
+
+// 跑标注：spawn codex 看图按词表填卡；批量返回建议（补空/纠错分好类），单张返回完整卡
+api.post('/api/annotate-tasks/:id/run', async (req, res, { params }) => {
+  const dir = taskDirOf(params.id);
+  const meta = readMeta(params.id);
+  if (!dir || !meta) return sendJson(res, 404, { error: '标注任务不存在' });
+  if (meta.status === 'done') return sendJson(res, 400, { error: '这个任务已经跑完' });
+  if (runningTasks.has(params.id)) return sendJson(res, 409, { error: '这个任务正在跑，稍等' });
+  runningTasks.add(params.id);
+  try {
+    const items = meta.mode === 'batch' ? meta.items : (meta.items || null);
+    // 单张预填也给 context 一条 index=1 的占位（itemId 用真档案当前值，imageB64 标注全新衣服）
+    const ctxItems = items || [{
+      no: null, name: '（新录入的衣服，还没有档案）', brand: null, category: null, sub: null,
+      color: null, pattern: null, thickness: null, fit: null, length: null,
+      neckline: null, fabric: null, elastic: null, styles: [],
+    }];
+    fs.writeFileSync(path.join(dir, 'context.md'), makeAnnotateContext(ctxItems));
+    fs.writeFileSync(path.join(dir, 'schema.json'), JSON.stringify(buildAnnotateSchema(), null, 2));
+    // -i 附图：批量用 data/images 原文件绝对路径（不拷贝）；单张新录入用任务文件夹里的截图
+    const imgArgs = meta.mode === 'batch'
+      ? items.flatMap((it) => ['-i', path.join(DATA_DIR, it.imageRel)])
+      : (meta.shotFiles || []).flatMap((f) => ['-i', path.join(dir, 'images', f)]);
+    if (meta.mode === 'single' && meta.items) imgArgs.push('-i', path.join(DATA_DIR, meta.items[0].imageRel));
+
+    await new Promise((resolve, reject) => {
+      const child = spawn('codex', [
+        'exec', '--skip-git-repo-check', '--sandbox', 'workspace-write',
+        ...imgArgs,
+        '--output-schema', 'schema.json', '-o', 'result.json',
+        '-c', 'model_reasoning_effort="low"',
+        buildAnnotatePrompt(),
+      ], { cwd: dir, stdio: ['ignore', 'ignore', 'pipe'], env: process.env });
+      let stderr = '';
+      child.stderr.on('data', (d) => { stderr = (stderr + d).slice(-4000); });
+      const killer = setTimeout(() => child.kill('SIGKILL'), 420_000);
+      child.on('error', (err) => {
+        clearTimeout(killer);
+        if (err.code === 'ENOENT') return reject(new Error('codex CLI 未安装（npm i -g @openai/codex）'));
+        reject(new Error(`AI 标注失败：${err.message}`));
+      });
+      child.on('exit', (code, signal) => {
+        clearTimeout(killer);
+        if (signal === 'SIGKILL' || signal === 'SIGTERM') return reject(new Error('AI 标注超时（7 分钟），稍后再试'));
+        if (code !== 0) {
+          const tail = stderr.slice(-300);
+          if (/not logged in|auth/i.test(tail)) return reject(new Error('Codex 未登录：终端跑一次 codex login'));
+          return reject(new Error(`AI 标注失败：${tail || `退出码 ${code}`}`));
+        }
+        resolve();
+      });
+    });
+
+    const resultPath = path.join(dir, 'result.json');
+    if (!fs.existsSync(resultPath)) return sendJson(res, 502, { error: 'AI 没有写出结果文件，稍后再试' });
+    let raw;
+    try { raw = JSON.parse(fs.readFileSync(resultPath, 'utf8')); } catch { return sendJson(res, 502, { error: 'AI 结果不是合法 JSON，稍后再试' }); }
+
+    if (meta.mode === 'batch') {
+      // 分类要拿「当前」卡值：meta 只存了指针，跑完按 itemId 重取最新档案（顺带容忍跑的过程中档案被改）
+      const clothesNow = store.read('clothes');
+      const freshItems = meta.items.map((m) => clothesNow.find((c) => c.id === m.itemId)).filter(Boolean);
+      const suggestions = validateAnnotateResult(raw, freshItems);
+      writeMeta(params.id, { ...meta, status: 'done', finishedAt: now() });
+      return sendJson(res, 200, { suggestions });
+    }
+    // 单张预填：复用买前比对的 card 校验（只取 card 部分）
+    const v = validateAiResult({ card: raw?.items?.[0] ?? {} });
+    writeMeta(params.id, { ...meta, status: 'done', finishedAt: now() });
+    sendJson(res, 200, { card: v.card, issues: v.issues });
   } finally {
     runningTasks.delete(params.id);
   }

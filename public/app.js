@@ -1,6 +1,6 @@
 // SPA 入口：hash 路由 + 全局搜索条 + 导航高亮
 // 路由：#/wardrobe（默认） #/item/:id #/editor/new #/editor/:id
-//       #/compare（买前比对） #/outfits #/outfit/:id #/board #/sizes #/avoid
+//       #/compare（买前比对） #/annotate（AI 标注） #/outfits #/outfit/:id #/board #/sizes #/avoid
 
 import { boardBadge } from './components.js';
 import { wardrobe } from './views/wardrobe.js';
@@ -12,9 +12,10 @@ import { outfitDetail } from './views/outfit.js';
 import { board } from './views/board.js';
 import { sizes } from './views/sizes.js';
 import { avoid } from './views/avoid.js';
+import { annotate } from './views/annotate.js';
 
 const ROUTES = {
-  wardrobe, compare, item: itemView, editor, outfits, outfit: outfitDetail, board, sizes, avoid,
+  wardrobe, compare, item: itemView, editor, outfits, outfit: outfitDetail, board, sizes, avoid, annotate,
 };
 
 export const state = {

@@ -72,6 +72,7 @@ export async function editor(view, [param]) {
   </div>`;
   view.append(sec2);
   const vocabRows = sec2.querySelector('#vocab-rows');
+  const rerenderVocab = {}; // AI 预填后要整体重渲染 pills，把各 pillGroup 的 render 登记在这里
 
   function pillGroup(key, label, { nullable = false, multi = false, max = 0 } = {}) {
     const def = v.fields[key];
@@ -102,6 +103,7 @@ export async function editor(view, [param]) {
       return p;
     }
     render();
+    rerenderVocab[key] = render;
     vocabRows.append(wrap);
   }
   pillGroup('color', '主色');
@@ -139,9 +141,50 @@ export async function editor(view, [param]) {
     <p class="muted" style="font-size:12px;letter-spacing:.08em;line-height:1.9">
       商品图做衣柜封面（必备）；实拍以一张正面全身照为主，拿不准合身程度才需要拍。iPhone 的 HEIC 图请截图后再传。
     </p>
+    <div class="btnline" style="margin-top:14px">
+      <button type="button" class="btn sm" id="f-ai">AI 预填描述卡</button>
+      <span class="muted" style="font-size:12px;letter-spacing:.08em">传完商品图点这里，AI 看图选词表（发送商品图给 AI，手动触发）——选完过一遍再存</span>
+    </div>
   </div>`;
   view.append(sec3);
   const imgRow = sec3.querySelector('#img-row');
+
+  // AI 预填：codex 看商品图按词表填卡 → 写进表单（她过目改错，存档照常严格校验）
+  sec3.querySelector('#f-ai').addEventListener('click', async (e) => {
+    const btn = e.target;
+    if (!form.productB64 && !form.productPath) return toast('先传商品图，AI 才有得看', true);
+    btn.disabled = true;
+    btn.textContent = 'AI 看图中，约半分钟…';
+    try {
+      const payload = form.productB64 ? { imageB64: form.productB64 } : { itemId: item.id };
+      const t = await api.createAnnotateTask(payload);
+      const r = await api.runAnnotateTask(t.taskId);
+      const card = r.card;
+      if (card.category && v.categories[card.category]) {
+        form.category = card.category;
+        form.sub = card.sub && v.categories[card.category].includes(card.sub) ? card.sub : v.categories[card.category][0];
+        catSel.value = form.category;
+        fillSubs();
+        renderNeckline();
+      }
+      for (const k of ['color', 'pattern', 'thickness', 'fit', 'length', 'neckline', 'fabric', 'elastic']) {
+        if (card[k] != null) form[k] = card[k];
+      }
+      if (card.styles?.length) form.styles = [...card.styles];
+      const nameInput = view.querySelector('#f-name');
+      if (!nameInput.value.trim() && card.name) { nameInput.value = card.name; form.name = card.name; }
+      const brandInput = view.querySelector('#f-brand');
+      if (!brandInput.value.trim() && card.brand) { brandInput.value = card.brand; form.brand = card.brand; }
+      Object.values(rerenderVocab).forEach((fn) => fn());
+      if (r.issues?.length) toast(`AI 预填好了；这几项没过词表已略过：${r.issues.join('；')}`, true);
+      else toast('AI 预填好了，过一遍再存');
+    } catch (err) {
+      toast(err.message, true);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'AI 预填描述卡';
+    }
+  });
   function dropzone(label, { b64Key, pathKey, required = false }) {
     const dz = el`<div class="dropzone">
       <div class="dz-preview"></div>

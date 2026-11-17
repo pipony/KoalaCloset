@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目状态
 
-**一期已验收（2026-11-14）；二期①买前比对工作台已实现并验收（2026-11-17，截图 AI 直调形态）**。`方案总结.md` 仍是唯一事实来源，所有产品决策以它为准，动新功能前先读它。
+**一期已验收（2026-11-14）；二期①买前比对 + ②AI 标注员已实现并验收（2026-11-17）**。`方案总结.md` 仍是唯一事实来源，所有产品决策以它为准，动新功能前先读它。
 
 - 启动：`npm start`（即 `node server.js`）→ http://localhost:4173
 - 测试：`npm test`（Node 内置 `node --test`，覆盖词表校验 / 自然语言解析 / 过滤 / 存储）
@@ -22,10 +22,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 2026-11-15 一期迭代：图片选择弹窗（`openClothesPicker`）；套搭温度带/场景可选；套搭详情页；尺码对比同类基准匹配；站名 Koala Closet。
 - 2026-11-17 二期① v1：待买区（手动录入 + 本地查重/对照/配几套），38 测 + 38 e2e 全绿。
 - 2026-11-17 二期① v2（**按小迪反馈返工，当前形态**）：撤销待买区导航与手动录入——**买前比对工作台** `#/compare`（页头「＋ 买前比对」入口）：丢淘宝截图（1~8 张）→ **codex CLI 按钮直调**（`POST /api/precheck-tasks` 建任务文件夹 `data/ai-tasks/<id>/` → `POST .../run` spawn codex `-i` 附图）→ AI 提取描述卡/尺寸表 + 结论四件套（建议码/查重/搭配面/一句话）→ `lib/aitask.js` 校验（schema enum + `validateAiResult` 词表复核，词表外值置空记 `aiIssues`）→ 生成待买档案（详情页「AI 结论」区块 + 本地对照印证）→ 转正（宽严两档：`validateClothes` 对待买放词表缺口、promote 前严校验逼补齐）/ 丢掉（连任务文件夹清掉）。**已装 codex CLI**（npm 全局 @openai/codex，复用桌面版登录态 gpt-6-astra）。46 项单元测试 + 22 项 mock e2e + 真实 codex 冒烟（145s 全链路含转正拦截闭环）全绿。
+- 2026-11-17 二期②**AI 标注员**（复用 ① 的 codex 直调通道）：**新录入预填**——editor 图片组「AI 预填描述卡」按钮（`rerenderVocab` 注册表刷新 pills）；**存量体检**——`#/annotate`（toc「AI 标注」）勾 ≤12 件 → AI 看商品图按词表给建议 → `validateAnnotateResult` 按**当前卡值**分两类：补空（默认勾）/ 疑似不符（默认不勾，主动勾才改）→ 逐件应用走 PUT（应用后仍缺必填则拦下指路编辑页）。端点 `POST /api/annotate-tasks`（批量 itemIds / 单张 imageB64 / 已有档案 itemId）+ `/run`（spawn 同三坑规避；批量 run 时按 itemId 重取最新档案再分类——meta 不存卡值快照）。安全口径：名称/品牌改动不建议、词表外值剔除留痕、AI 不默默改数据。51 项单元测试 + 18 项 mock e2e 全绿；**真实 codex 冒烟因当日断网（api.openai.com 不通）挂起，网络恢复后补跑**（会话内已排自动重试）。
 - 2026-11-17 拍板（方案第 5 节）：**AI 搭配口味参考 = 每次先问、默认不发；避雷清单 = 喂给 AI 当负面偏好**。
-- 途中修复的坑（新代码别再犯）：`el()` 单顶级/`els()` 多顶级；换图同名覆盖勿删旧图；`node --test` 不带目录参数；**测试服务核对进程 cwd 与端口**（`kill %1` 不跨 shell、端口被占新服务静默失败）；**spawn codex 三条命脉**——① 监听 `exit` 而非 execFile 回调（codex 沙箱子进程攥着 stdio 管道，close 会挂到超时）② `stdin:'ignore'`（非 tty stdin 会让 codex 等输入）③ `-i` 路径必须带扩展名；**OpenAI 严格 schema**：可空用 `anyOf [{...},{type:'null'}]`、不许自由 key 的 map（部位固定枚举 + null 值，`lib/aitask.js` 的 `MEASUREMENT_PARTS`）；`cp a b dir/` 会把 a、b 平铺进 dir（多个源不会保子目录结构）。
+- 途中修复的坑（新代码别再犯）：`el()` 单顶级/`els()` 多顶级；换图同名覆盖勿删旧图；`node --test` 不带目录参数；**测试服务核对进程 cwd 与端口**（`kill %1` 不跨 shell、端口被占新服务静默失败）；**spawn codex 三条命脉**——① 监听 `exit` 而非 execFile 回调（codex 沙箱子进程攥着 stdio 管道，close 会挂到超时）② `stdin:'ignore'`（非 tty stdin 会让 codex 等输入）③ `-i` 路径必须带扩展名；**OpenAI 严格 schema**：可空用 `anyOf [{...},{type:'null'}]`、不许自由 key 的 map（部位固定枚举 + null 值，`lib/aitask.js` 的 `MEASUREMENT_PARTS`）；`cp a b dir/` 会把 a、b 平铺进 dir（多个源不会保子目录结构）；**el\` 模板赋值语句结尾是 \`; 不是 \`);**（append 才带括号，写岔了报错行号会指到别处）；绝对定位的 checkbox 要 `z-index` 盖过后面 relative 的兄弟节点。
 
-**待办**：二期剩三项——② AI 标注员 → ③ AI 搭配 → ④ 问 ChatGPT（②③ 沿用已跑通的 codex 直调通道；口味参考/避雷口径已定）；让小迪用真实淘宝截图试买前比对攒反馈。小尾巴：套搭详情页不能补标温度带/场景/标题；无数据备份机制（手动拷 `data/`）。
+**待办**：二期剩两项——③ AI 搭配 → ④ 问 ChatGPT（沿用 codex 直调通道；口味参考/避雷口径已定）；**AI 标注员真实 codex 冒烟待网络恢复补跑**；让小迪用真实淘宝截图试买前比对 + 录真实衣服用 AI 预填攒反馈。小尾巴：套搭详情页不能补标温度带/场景/标题；无数据备份机制（手动拷 `data/`）。
 
 本项目是 git 仓库（2026-11-16 init，远程 `git@github.com:pipony/KoalaCloset.git`，HTTPS 不通走 SSH）。`data/` 已在 `.gitignore`——**私人档案与图片永不入库**，重要数据靠手动备份 `data/` 文件夹。完成功能后随手 commit + push，并更新本快照。
 

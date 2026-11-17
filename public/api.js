@@ -31,6 +31,8 @@ export const api = {
   precheck: (id) => request('GET', `/api/clothes/${id}/precheck`),
   createPrecheckTask: (images) => request('POST', '/api/precheck-tasks', { images }),
   runPrecheckTask: (taskId) => request('POST', `/api/precheck-tasks/${taskId}/run`),
+  createAnnotateTask: (data) => request('POST', '/api/annotate-tasks', data),
+  runAnnotateTask: (taskId) => request('POST', `/api/annotate-tasks/${taskId}/run`),
   outfits: (params = {}) => {
     const q = new URLSearchParams(Object.entries(params).filter(([, v]) => v));
     const s = q.toString();

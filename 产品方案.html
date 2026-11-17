@@ -624,16 +624,21 @@ footer b{color:var(--ink2)}
 
   <!-- 3.8 -->
   <div class="feature rv" id="f38">
-    <div class="f-head"><span class="f-num">3.8</span><span class="f-title">AI 标注员</span><span style="margin-left:auto;display:flex;gap:8px"><span class="badge b2">第二期</span><span class="badge bn">需联网 · 手动触发</span></span></div>
+    <div class="f-head"><span class="f-num">3.8</span><span class="f-title">AI 标注员</span><span style="margin-left:auto;display:flex;gap:8px"><span class="badge b1">已实现 · 2026-11-17</span><span class="badge bn">需联网 · 手动触发</span></span></div>
     <div class="f-body">
       <div class="kv">
         <div class="kv-t">职责</div>
         <div class="kv-d">按 <em>3.1 定稿的固定词表</em>自动填描述卡，保证所有卡片口径一致（也是本地找衣服能准确匹配的前提）。</div>
       </div>
       <div class="kv">
-        <div class="kv-t">流程</div>
-        <div class="kv-d">AI 预填 → 用户逐张<em>确认</em> → 才算入库。AI 不默默改数据。</div>
+        <div class="kv-t">用法一 · 新录入预填</div>
+        <div class="kv-d">录入页传完商品图点「AI 预填描述卡」——codex 看图把 9 组词表 pills 和名称/品牌选好，她过一遍改错再存。</div>
       </div>
+      <div class="kv">
+        <div class="kv-t">用法二 · 存量体检（#/annotate）</div>
+        <div class="kv-d">勾选衣柜衣服（一批 ≤12 件）→ AI 看图对照当前卡，分两类建议：<em>补空</em>（默认勾选采纳）与<em>疑似不符</em>（默认不勾，「现值 → AI 认为是」，她主动勾才改）→ 逐件逐字段确认后应用。</div>
+      </div>
+      <div class="callout">AI 不默默改数据：结果永远先进确认界面；词表外值剔除留痕；名称/品牌的改动不建议（自由文本以她为准）。发送 = 商品图 + 词表 + 当前文字卡，界面常显说明。</div>
     </div>
   </div>
 </section>
@@ -766,7 +771,7 @@ footer b{color:var(--ink2)}
     <div class="phase-h"><span class="pn">Ⅱ</span><span class="pt">第二期</span><span class="ps">买前模块 + AI 增强</span></div>
     <ol>
       <li><div class="li-t"><b>买前比对工作台</b>：丢淘宝截图 → codex AI 看图比对给结论 → 本地印证 → 转正/丢掉。<span class="li-chip">已实现 · 2026-11-17</span><small>46 项单元测试 + 22 项端到端 + 真实 codex 冒烟全绿。</small></div></li>
-      <li><div class="li-t"><b>AI 标注员</b>：固定词表预填描述卡 + 用户确认。<small>反哺第一期手动录入的存量卡片；沿用已跑通的 Codex 直调通道。</small></div></li>
+      <li><div class="li-t"><b>AI 标注员</b>：固定词表预填描述卡 + 用户确认。<span class="li-chip">已实现 · 2026-11-17</span><small>新录入预填 + 存量体检（补空默认勾、改动默认不勾）；51 项单元测试 + 18 项端到端全绿。</small></div></li>
       <li><div class="li-t"><b>AI 帮忙搭配</b>：防跑偏优先级、默认不传照片、视觉复核开关默认关、接上「立刻换一套」。</div></li>
       <li><div class="li-t"><b>自然语言「问 ChatGPT」</b>：手动入口正式接入。</div></li>
     </ol>

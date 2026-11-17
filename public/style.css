@@ -401,6 +401,30 @@ footer{margin-top:64px;text-align:center;font-size:11px;letter-spacing:.4em;colo
 /* 选择弹窗的「含待买」切换：与分类 chip 同款但右对齐隔开 */
 .modal-filters .wish-toggle{margin-left:auto;letter-spacing:.15em}
 
+/* ---------- AI 标注员 ---------- */
+.ann-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.ann-item{display:flex;flex-direction:column;gap:8px;border:1px solid var(--hair);padding:10px;cursor:pointer;transition:.2s;position:relative}
+.ann-item:hover{background:var(--hover)}
+.ann-item.on{border-color:var(--ink)}
+.ann-item input{position:absolute;top:8px;right:8px;accent-color:var(--accent);z-index:2}
+.ann-item .f{height:96px;display:flex;align-items:center;justify-content:center;border:1px solid var(--hair);background:#FDFCF9;position:relative;overflow:hidden}
+.ann-item .f img{max-width:88%;max-height:88%;object-fit:contain}
+.ann-item .f svg{width:50px;height:50px}
+.ann-item .nm b{font-size:12.5px;font-weight:500;letter-spacing:.04em;display:block;margin-bottom:3px}
+.ann-item .nm span{font-size:10.5px;letter-spacing:.08em}
+/* 体检结果行：补空（默认勾）/ 改动（默认不勾） */
+.ann-rows{display:flex;flex-direction:column;gap:8px}
+.ann-row{display:flex;align-items:center;gap:14px;border:1px solid var(--hair);padding:9px 14px;cursor:pointer;transition:.2s}
+.ann-row:hover{background:var(--hover)}
+.ann-row input{accent-color:var(--accent)}
+.ann-row .k{font-size:11px;letter-spacing:.25em;color:var(--ink-2);min-width:44px}
+.ann-row .v{font-size:13.5px;flex:1}
+.ann-row .v s{color:var(--ink-2)}
+.ann-row .v .arr{color:var(--accent);margin:0 6px}
+.ann-row .tag{font-size:10px;letter-spacing:.2em;padding:3px 8px;white-space:nowrap}
+.ann-row.fill .tag{background:var(--ink);color:var(--paper)}
+.ann-row.fix .tag{border:1px solid var(--accent);color:var(--accent)}
+
 @media (prefers-reduced-motion: reduce){
   .masthead,.item{animation:none;opacity:1;transform:none}
 }
