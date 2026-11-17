@@ -5,7 +5,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { spawn } from 'node:child_process';
+import { spawn, execFileSync } from 'node:child_process';
 import { createRouter } from './lib/router.js';
 import { createStore } from './lib/store.js';
 import { createImages, parseDataUrl } from './lib/images.js';
@@ -73,6 +73,59 @@ function serveFile(res, absPath) {
 }
 
 // ---------- 业务处理 ----------
+
+// codex 直调公共逻辑 —— spawn 细节三条命脉：
+// 1) 监听 exit 而非 close：codex 的沙盒子进程可能攥着 stdio 管道不松，execFile 回调（等 close）会挂到超时
+// 2) stdin 必须 ignore：codex exec 见非 tty 的 stdin 会一直等输入
+// 3) 代理：终端不吃 macOS 系统代理（浏览器通了终端照样断）——scutil 探测系统代理给 codex 补上；
+//    已有 HTTPS_PROXY 环境变量则尊重不覆盖
+let codexEnvCache = null;
+function codexEnv() {
+  if (codexEnvCache) return codexEnvCache;
+  const env = { ...process.env };
+  if (!env.HTTPS_PROXY && !env.https_proxy && process.platform === 'darwin') {
+    try {
+      const out = execFileSync('scutil', ['--proxy'], { encoding: 'utf8' });
+      const dict = Object.fromEntries(out.trim().split('\n').map((l) => l.split(' : ').map((s) => s.trim())).filter((a) => a.length === 2));
+      if (dict.HTTPSEnable === '1' && dict.HTTPSProxy && dict.HTTPSPort) {
+        env.HTTPS_PROXY = env.HTTP_PROXY = `http://${dict.HTTPSProxy}:${dict.HTTPSPort}`;
+      }
+    } catch { /* 探测不到就直连 */ }
+  }
+  codexEnvCache = env;
+  return env;
+}
+
+// 跑一次 codex exec：cwd 必须是任务文件夹（context.md/schema.json 在场），图以 -i 绝对路径附上
+function runCodex(dir, imgArgs, prompt, errWord) {
+  return new Promise((resolve, reject) => {
+    const child = spawn('codex', [
+      'exec', '--skip-git-repo-check', '--sandbox', 'workspace-write',
+      ...imgArgs,
+      '--output-schema', 'schema.json', '-o', 'result.json',
+      '-c', 'model_reasoning_effort="low"',
+      prompt,
+    ], { cwd: dir, stdio: ['ignore', 'ignore', 'pipe'], env: codexEnv() });
+    let stderr = '';
+    child.stderr.on('data', (d) => { stderr = (stderr + d).slice(-4000); });
+    const killer = setTimeout(() => child.kill('SIGKILL'), 420_000);
+    child.on('error', (err) => {
+      clearTimeout(killer);
+      if (err.code === 'ENOENT') return reject(new Error('codex CLI 未安装（npm i -g @openai/codex）'));
+      reject(new Error(`${errWord}失败：${err.message}`));
+    });
+    child.on('exit', (code, signal) => {
+      clearTimeout(killer);
+      if (signal === 'SIGKILL' || signal === 'SIGTERM') return reject(new Error(`${errWord}超时（7 分钟），稍后再试`));
+      if (code !== 0) {
+        const tail = stderr.slice(-300);
+        if (/not logged in|auth/i.test(tail)) return reject(new Error('Codex 未登录：终端跑一次 codex login'));
+        return reject(new Error(`${errWord}失败：${tail || `退出码 ${code}`}`));
+      }
+      resolve();
+    });
+  });
+}
 
 // 把请求体里的 b64 图片落盘，返回可存的记录字段
 function materializeImages(id, body, old = {}) {
@@ -307,38 +360,7 @@ api.post('/api/precheck-tasks/:id/run', async (req, res, { params }) => {
     fs.writeFileSync(path.join(dir, 'context.md'), context);
     fs.writeFileSync(path.join(dir, 'schema.json'), JSON.stringify(buildOutputSchema(), null, 2));
     const imgArgs = (meta.shotFiles || []).flatMap((f) => ['-i', path.join(dir, 'images', f)]);
-
-    // spawn 细节两条命脉：
-    // 1) 监听 exit 而非 close——codex 的沙箱子进程可能攥着 stdio 管道不松，
-    //    execFile 的回调（等 close）会一直挂到超时；进程退出即可继续。
-    // 2) stdin 必须 ignore：codex exec 见非 tty 的 stdin 会一直等输入。
-    await new Promise((resolve, reject) => {
-      const child = spawn('codex', [
-        'exec', '--skip-git-repo-check', '--sandbox', 'workspace-write',
-        ...imgArgs,
-        '--output-schema', 'schema.json', '-o', 'result.json',
-        '-c', 'model_reasoning_effort="low"',
-        buildTaskPrompt(),
-      ], { cwd: dir, stdio: ['ignore', 'ignore', 'pipe'], env: process.env });
-      let stderr = '';
-      child.stderr.on('data', (d) => { stderr = (stderr + d).slice(-4000); });
-      const killer = setTimeout(() => child.kill('SIGKILL'), 420_000);
-      child.on('error', (err) => {
-        clearTimeout(killer);
-        if (err.code === 'ENOENT') return reject(new Error('codex CLI 未安装（npm i -g @openai/codex）'));
-        reject(new Error(`AI 比对失败：${err.message}`));
-      });
-      child.on('exit', (code, signal) => {
-        clearTimeout(killer);
-        if (signal === 'SIGKILL' || signal === 'SIGTERM') return reject(new Error('AI 比对超时（7 分钟），稍后再试'));
-        if (code !== 0) {
-          const tail = stderr.slice(-300);
-          if (/not logged in|auth/i.test(tail)) return reject(new Error('Codex 未登录：终端跑一次 codex login'));
-          return reject(new Error(`AI 比对失败：${tail || `退出码 ${code}`}`));
-        }
-        resolve();
-      });
-    });
+    await runCodex(dir, imgArgs, buildTaskPrompt(), 'AI 比对');
 
     const resultPath = path.join(dir, 'result.json');
     if (!fs.existsSync(resultPath)) return sendJson(res, 502, { error: 'AI 没有写出结果文件，稍后再试' });
@@ -439,33 +461,7 @@ api.post('/api/annotate-tasks/:id/run', async (req, res, { params }) => {
       : (meta.shotFiles || []).flatMap((f) => ['-i', path.join(dir, 'images', f)]);
     if (meta.mode === 'single' && meta.items) imgArgs.push('-i', path.join(DATA_DIR, meta.items[0].imageRel));
 
-    await new Promise((resolve, reject) => {
-      const child = spawn('codex', [
-        'exec', '--skip-git-repo-check', '--sandbox', 'workspace-write',
-        ...imgArgs,
-        '--output-schema', 'schema.json', '-o', 'result.json',
-        '-c', 'model_reasoning_effort="low"',
-        buildAnnotatePrompt(),
-      ], { cwd: dir, stdio: ['ignore', 'ignore', 'pipe'], env: process.env });
-      let stderr = '';
-      child.stderr.on('data', (d) => { stderr = (stderr + d).slice(-4000); });
-      const killer = setTimeout(() => child.kill('SIGKILL'), 420_000);
-      child.on('error', (err) => {
-        clearTimeout(killer);
-        if (err.code === 'ENOENT') return reject(new Error('codex CLI 未安装（npm i -g @openai/codex）'));
-        reject(new Error(`AI 标注失败：${err.message}`));
-      });
-      child.on('exit', (code, signal) => {
-        clearTimeout(killer);
-        if (signal === 'SIGKILL' || signal === 'SIGTERM') return reject(new Error('AI 标注超时（7 分钟），稍后再试'));
-        if (code !== 0) {
-          const tail = stderr.slice(-300);
-          if (/not logged in|auth/i.test(tail)) return reject(new Error('Codex 未登录：终端跑一次 codex login'));
-          return reject(new Error(`AI 标注失败：${tail || `退出码 ${code}`}`));
-        }
-        resolve();
-      });
-    });
+    await runCodex(dir, imgArgs, buildAnnotatePrompt(), 'AI 标注');
 
     const resultPath = path.join(dir, 'result.json');
     if (!fs.existsSync(resultPath)) return sendJson(res, 502, { error: 'AI 没有写出结果文件，稍后再试' });
