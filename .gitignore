@@ -6,3 +6,6 @@ data/
 *.bak
 *.tmp
 __pycache__/
+
+# Claude Code 会话产物（定时任务锁等）
+.claude/
