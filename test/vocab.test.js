@@ -29,6 +29,14 @@ test('状态只认 在衣柜/待买，缺省合法', () => {
   assert.equal(validateClothes({ ...good, status: '想要' }).ok, false);
 });
 
+test('待买卡（AI 提取）允许词表字段缺口；在衣柜口径必填', () => {
+  const gappy = { ...good, thickness: null, length: null, elastic: null, styles: [], status: '待买' };
+  assert.equal(validateClothes(gappy).ok, true); // 待买：缺口放行，转正前再补
+  assert.equal(validateClothes({ ...gappy, status: '在衣柜' }).ok, false); // 在衣柜：必填拦下
+  // 但词表外取值在待买也拦
+  assert.equal(validateClothes({ ...gappy, color: '藕荷色' }).ok, false);
+});
+
 test('风格最多两项', () => {
   assert.equal(validateClothes({ ...good, styles: ['通勤', '休闲'] }).ok, true);
   assert.equal(validateClothes({ ...good, styles: ['通勤', '休闲', '运动'] }).ok, false);

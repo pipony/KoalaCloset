@@ -192,12 +192,6 @@ export function boardBadge() {
   if (b) { b.textContent = n; b.style.display = n ? 'inline-block' : 'none'; }
 }
 
-// —— 待买区计数徽章（toc 上；由拉到衣服列表的页面刷新） ——
-export function wishBadge(count) {
-  const b = document.getElementById('wish-badge');
-  if (b) { b.textContent = count; b.style.display = count ? 'inline-block' : 'none'; }
-}
-
 // —— toast ——
 let toastTimer = null;
 export function toast(msg, isErr = false) {

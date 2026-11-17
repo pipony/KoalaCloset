@@ -1,5 +1,5 @@
 // 衣服详情页：单页文章式 —— 大图并排、编号标题、描述卡词条表、尺码区块、操作
-// 待买件多一段「买前对照台」：尺码对照 / 买前查重 / 能配几套，结局是转正或丢掉
+// 待买件多一段「买前对照台」：AI 结论（截图比对）+ 尺码对照 / 买前查重 / 能配几套（本地印证），结局是转正或丢掉
 
 import { api } from '../api.js';
 import {
@@ -12,7 +12,7 @@ export async function itemView(view, [id]) {
   const no = noLabel(item);
 
   view.append(els`
-    <div class="backline"><a class="linkbtn" href="${isWish ? '#/wish' : '#/wardrobe'}">← ${isWish ? '回待买区' : '回衣柜'}</a></div>
+    <div class="backline"><a class="linkbtn" href="${isWish ? '#/compare' : '#/wardrobe'}">← ${isWish ? '回买前比对' : '回衣柜'}</a></div>
     <div class="detail-head">
       <h2><span class="dno">${no}</span>${esc(item.name)}</h2>
       <span class="muted" style="letter-spacing:.2em">${item.brand ? esc(item.brand) + ' · ' : ''}${item.category} / ${item.sub}${isWish ? ' · <span style="color:var(--accent)">待买</span>' : ''}${item.isBaseline ? ' · <span style="color:var(--accent)">基准款</span>' : ''}</span>
@@ -115,7 +115,7 @@ export async function itemView(view, [id]) {
     try {
       await api.deleteCloth(item.id);
       toast(isWish ? '已丢掉' : '已删除');
-      location.hash = isWish ? '#/wish' : '#/wardrobe';
+      location.hash = isWish ? '#/compare' : '#/wardrobe';
     } catch (e) {
       confirm.classList.remove('show');
       const refs = e.data?.refs;
@@ -128,13 +128,33 @@ export async function itemView(view, [id]) {
   });
 }
 
-// —— 买前对照台：①尺码对照 ②买前查重 ③能配几套 ——
+// —— 买前对照台：⓪AI 结论 ①尺码对照 ②买前查重 ③能配几套 ——
 async function preCheckSection(view, item) {
   view.append(el`<div class="runhead"><h2>买前对照台</h2><span>PRE-PURCHASE CHECK</span></div>`);
   const [allOwned, pre] = await Promise.all([
     api.clothes({ status: '在衣柜' }),
     api.precheck(item.id),
   ]);
+
+  // ⓪ AI 结论：codex 看截图比对的直接答案（下面的区块是本地引擎的客观印证）
+  if (item.aiConclusion) {
+    const ac = item.aiConclusion;
+    const concl = el`<div class="form-section ai-concl">
+      <div class="fs-head"><h3>AI 结论</h3><span class="fs-no">FROM SCREENSHOTS · 看图比对</span></div>
+      <div class="ac-grid">
+        <div class="ac-cell"><label>建议码数</label><b>${esc(ac.size?.advice || '—')}</b><span>${esc(ac.size?.reason || '')}</span></div>
+        <div class="ac-cell"><label>衣柜里有差不多的吗</label><b>${ac.duplicate?.verdict === '有差不多的' ? '有，当心重复' : '没有，买得不重'}</b><span>${
+          (ac.duplicate?.items || []).map((it) => `${esc(it.name)}（${esc(it.why)}）`).join('；') || esc(ac.duplicate?.note || '')
+        }</span></div>
+        <div class="ac-cell"><label>搭配面</label><b>能配什么</b><span>${esc(ac.match || '')}</span></div>
+        <div class="ac-cell ac-final"><label>一句话</label><b>${esc(ac.summary || '')}</b></div>
+      </div>
+      ${item.aiIssues?.length ? `<p class="muted" style="font-size:12px;letter-spacing:.06em;margin-top:10px">AI 填的这些字段没过词表校验已置空：${esc(item.aiIssues.join('；'))}——可点「编辑档案」补。</p>` : ''}
+    </div>`;
+    view.append(concl);
+  } else {
+    view.append(el`<p class="muted" style="font-size:12px;letter-spacing:.08em;margin:10px 2px 14px">这件还没有 AI 结论（可能是手动建的）——去「买前比对」传截图跑一次，或在下面看本地对照。</p>`);
+  }
 
   // ① 尺码对照：和同类基准款并排比数字，超差标红 = 该买什么码的答案
   const sizeSec = el`<div class="form-section">
@@ -143,7 +163,7 @@ async function preCheckSection(view, item) {
   const baselines = allOwned.filter((c) => c.isBaseline);
   if (!item.sizeChart?.length) {
     sizeSec.append(el`<p class="muted" style="font-size:13px;letter-spacing:.06em">
-      还没填商品尺寸表——去「编辑档案」把详情页的尺寸数字抄进尺码区，这里就能和基准款并排比数字。</p>`);
+      还没有尺寸表数字（截图里可能没拍到详情页尺寸表）——补一张尺寸表截图重新比对，或去「编辑档案」把数字抄进尺码区。</p>`);
   } else if (baselines.length === 0) {
     sizeSec.append(el`<p class="muted" style="font-size:13px;letter-spacing:.06em">
       还没有基准款。先把 2～3 件非常合身的衣服标成基准款，才有得比。去「尺码档案」页看看。</p>`);

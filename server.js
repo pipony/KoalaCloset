@@ -5,12 +5,14 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { spawn } from 'node:child_process';
 import { createRouter } from './lib/router.js';
 import { createStore } from './lib/store.js';
-import { createImages } from './lib/images.js';
+import { createImages, parseDataUrl } from './lib/images.js';
 import { parseQuery } from './lib/nlparse.js';
 import { filterClothes, filterOutfits } from './lib/filter.js';
 import { findDuplicates, matchableOutfits } from './lib/buycheck.js';
+import { makeTaskContext, buildOutputSchema, buildTaskPrompt, validateAiResult } from './lib/aitask.js';
 import {
   validateClothes, validateOutfit, validateAvoid, publicVocab, TEMP_BANDS, SCENES, TEMP_THICKNESS,
 } from './lib/vocab.js';
@@ -205,6 +207,11 @@ api.delete('/api/clothes/:id', async (req, res, { params }) => {
   const [removed] = list.splice(idx, 1);
   await store.save('clothes', list);
   images.remove([removed.productImage, removed.fitImage, removed.sizeChartImage].filter(Boolean));
+  // AI 比对件被丢掉 → 任务文件夹（原始截图）一起清，不留垃圾
+  if (removed.aiTaskId) {
+    const tdir = taskDirOf(removed.aiTaskId);
+    if (tdir && tdir.startsWith(TASKS_DIR)) fs.rmSync(tdir, { recursive: true, force: true });
+  }
   sendJson(res, 204, {});
 });
 
@@ -214,6 +221,11 @@ api.post('/api/clothes/:id/promote', async (req, res, { params }) => {
   const item = list.find((c) => c.id === params.id);
   if (!item) return sendJson(res, 404, { error: '衣服不存在' });
   if (item.status !== '待买') return sendJson(res, 400, { error: '这件已在衣柜里，不用转' });
+  // 转正按「在衣柜」口径严校验：AI 比对卡的缺口（厚薄/长度等）要在此前补齐
+  const strict = validateClothes({ ...item, status: '在衣柜' });
+  if (!strict.ok) {
+    return sendJson(res, 400, { error: `转正前先去「编辑档案」补齐：${strict.errors.join('；')}` });
+  }
   item.status = '在衣柜';
   item.no = nextNo();
   item.updatedAt = now();
@@ -233,6 +245,129 @@ api.get('/api/clothes/:id/precheck', (req, res, { params }) => {
     duplicates: findDuplicates(item, owned),
     outfits: matchableOutfits(item, store.read('outfits'), byId, TEMP_THICKNESS),
   });
+});
+
+// --- 买前 AI 比对（Codex 文件契约 · 按钮直调） ---
+// 任务文件夹 data/ai-tasks/<taskId>/：images/ 截图 + context.md 衣柜文字卡 + schema.json + result.json
+const TASKS_DIR = path.join(DATA_DIR, 'ai-tasks');
+const runningTasks = new Set(); // 防双击并发跑同一个任务
+
+function taskDirOf(taskId) {
+  if (!/^t-[\w-]+$/.test(taskId)) return null; // 防路径穿越
+  return path.join(TASKS_DIR, taskId);
+}
+function readMeta(taskId) {
+  const dir = taskDirOf(taskId);
+  if (!dir || !fs.existsSync(path.join(dir, 'meta.json'))) return null;
+  try { return JSON.parse(fs.readFileSync(path.join(dir, 'meta.json'), 'utf8')); } catch { return null; }
+}
+function writeMeta(taskId, meta) {
+  fs.writeFileSync(path.join(taskDirOf(taskId), 'meta.json'), JSON.stringify(meta, null, 2));
+}
+
+// 上传截图（1~8 张）→ 建任务：截图落任务文件夹（给 codex -i 附图），首图另存进 data/images 做档案封面
+api.post('/api/precheck-tasks', async (req, res, { body }) => {
+  const shots = Array.isArray(body.images) ? body.images : [];
+  if (shots.length < 1 || shots.length > 8) return sendJson(res, 400, { error: '截图传 1~8 张' });
+  const taskId = `t-${shortId()}`;
+  const dir = path.join(TASKS_DIR, taskId, 'images');
+  fs.mkdirSync(dir, { recursive: true });
+  const shotFiles = []; // 带扩展名的文件名（01.png…），run 时拼 -i 绝对路径
+  let productImage = null;
+  try {
+    shots.forEach((dataUrl, i) => {
+      const { buf, ext } = parseDataUrl(dataUrl);
+      const fname = `${String(i + 1).padStart(2, '0')}.${ext}`;
+      fs.writeFileSync(path.join(dir, fname), buf);
+      shotFiles.push(fname);
+    });
+    productImage = images.save(shots[0], taskId, 'shot'); // 档案封面（/images/... 可直出）
+  } catch (e) {
+    fs.rmSync(path.join(TASKS_DIR, taskId), { recursive: true, force: true });
+    return sendJson(res, 400, { error: e.message });
+  }
+  writeMeta(taskId, { taskId, status: 'ready', createdAt: now(), imageCount: shots.length, shotFiles, productImage });
+  sendJson(res, 201, { taskId, imageCount: shots.length });
+});
+
+// 跑 codex → 读回结果 → 校验 → 建待买档案。联网操作，仅由用户点按钮触发。
+api.post('/api/precheck-tasks/:id/run', async (req, res, { params }) => {
+  const dir = taskDirOf(params.id);
+  const meta = readMeta(params.id);
+  if (!dir || !meta) return sendJson(res, 404, { error: '比对任务不存在' });
+  if (meta.status === 'done') return sendJson(res, 400, { error: '这个任务已经比完（要重比：丢掉那件待买档案再传一次截图）' });
+  if (runningTasks.has(params.id)) return sendJson(res, 409, { error: '这个任务正在跑，稍等' });
+  runningTasks.add(params.id);
+  try {
+    // 每次跑都重新生成上下文（衣柜可能变了）；词表外值由 schema enum + validateAiResult 双重把关
+    const context = makeTaskContext(store.read('clothes'));
+    fs.writeFileSync(path.join(dir, 'context.md'), context);
+    fs.writeFileSync(path.join(dir, 'schema.json'), JSON.stringify(buildOutputSchema(), null, 2));
+    const imgArgs = (meta.shotFiles || []).flatMap((f) => ['-i', path.join(dir, 'images', f)]);
+
+    // spawn 细节两条命脉：
+    // 1) 监听 exit 而非 close——codex 的沙箱子进程可能攥着 stdio 管道不松，
+    //    execFile 的回调（等 close）会一直挂到超时；进程退出即可继续。
+    // 2) stdin 必须 ignore：codex exec 见非 tty 的 stdin 会一直等输入。
+    await new Promise((resolve, reject) => {
+      const child = spawn('codex', [
+        'exec', '--skip-git-repo-check', '--sandbox', 'workspace-write',
+        ...imgArgs,
+        '--output-schema', 'schema.json', '-o', 'result.json',
+        '-c', 'model_reasoning_effort="low"',
+        buildTaskPrompt(),
+      ], { cwd: dir, stdio: ['ignore', 'ignore', 'pipe'], env: process.env });
+      let stderr = '';
+      child.stderr.on('data', (d) => { stderr = (stderr + d).slice(-4000); });
+      const killer = setTimeout(() => child.kill('SIGKILL'), 420_000);
+      child.on('error', (err) => {
+        clearTimeout(killer);
+        if (err.code === 'ENOENT') return reject(new Error('codex CLI 未安装（npm i -g @openai/codex）'));
+        reject(new Error(`AI 比对失败：${err.message}`));
+      });
+      child.on('exit', (code, signal) => {
+        clearTimeout(killer);
+        if (signal === 'SIGKILL' || signal === 'SIGTERM') return reject(new Error('AI 比对超时（7 分钟），稍后再试'));
+        if (code !== 0) {
+          const tail = stderr.slice(-300);
+          if (/not logged in|auth/i.test(tail)) return reject(new Error('Codex 未登录：终端跑一次 codex login'));
+          return reject(new Error(`AI 比对失败：${tail || `退出码 ${code}`}`));
+        }
+        resolve();
+      });
+    });
+
+    const resultPath = path.join(dir, 'result.json');
+    if (!fs.existsSync(resultPath)) return sendJson(res, 502, { error: 'AI 没有写出结果文件，稍后再试' });
+    let raw;
+    try { raw = JSON.parse(fs.readFileSync(resultPath, 'utf8')); } catch { return sendJson(res, 502, { error: 'AI 结果不是合法 JSON，稍后再试' }); }
+
+    const v = validateAiResult(raw);
+    const item = {
+      id: `c-${shortId()}`,
+      no: null,
+      name: v.card.name, brand: v.card.brand,
+      category: v.card.category || '上装', sub: v.card.sub || '短袖', // 大类缺失的兜底（issues 里已记）
+      status: '待买',
+      color: v.card.color, pattern: v.card.pattern, thickness: v.card.thickness,
+      fit: v.card.fit, length: v.card.length, neckline: v.card.neckline,
+      fabric: v.card.fabric, elastic: v.card.elastic, styles: v.card.styles,
+      productImage: meta.productImage, fitImage: null, sizeChartImage: null,
+      sizeChart: v.sizeChart, boughtSize: null, fitFeedback: null,
+      isBaseline: false,
+      aiConclusion: v.conclusion, aiIssues: v.issues, aiTaskId: params.id,
+      createdAt: now(), updatedAt: now(),
+    };
+    const check = validateClothes(item);
+    if (!check.ok) return sendJson(res, 502, { error: `AI 结果没过校验：${check.errors.join('；')}` });
+    const list = store.read('clothes');
+    list.push(item);
+    await store.save('clothes', list);
+    writeMeta(params.id, { ...meta, status: 'done', clothId: item.id, finishedAt: now() });
+    sendJson(res, 201, { cloth: item, issues: v.issues });
+  } finally {
+    runningTasks.delete(params.id);
+  }
 });
 
 function nextNo() {

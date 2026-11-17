@@ -479,29 +479,29 @@ footer b{color:var(--ink2)}
 
   <!-- 3.3 -->
   <div class="feature rv" id="f33">
-    <div class="f-head"><span class="f-num">3.3</span><span class="f-title">买前对照台 / 买前查重</span><span class="badge b1" style="margin-left:auto">已实现 · 2026-11-17</span></div>
+    <div class="f-head"><span class="f-num">3.3</span><span class="f-title">买前比对工作台</span><span class="badge b1" style="margin-left:auto">已实现 · 2026-11-17</span></div>
     <div class="f-body">
       <div class="kv">
-        <div class="kv-t">待买区 · 三件事</div>
-        <div class="kv-d">看中的衣服先放进待买区，不进正式衣柜。在待买区里做三件事：</div>
+        <div class="kv-t">丢截图，不填表</div>
+        <div class="kv-d">比对是<b>临时动作</b>，不做待买区收藏。页头「＋ 买前比对」进来，把淘宝卖家秀 + 详情页尺寸表截图丢进去（1~8 张），不手动填任何词表字段。</div>
       </div>
       <div class="flow">
         <div class="fnode start">看中一件衣服</div>
         <span class="farrow">→</span>
-        <div class="fnode">进待买区</div>
+        <div class="fnode">丢截图进工作台</div>
         <span class="farrow">→</span>
         <div class="fstage">
-          <div class="mini"><b>①</b> 对照尺码档案（基准款 / 尺寸表 / 实际码），判断该买什么码</div>
-          <div class="mini"><b>②</b> 买前查重：与衣柜已有衣服比对，是不是已经有件差不多的（同细分前置，文字卡加权打分：≥6 高度相似 / ≥3 有些像）</div>
-          <div class="mini"><b>③</b> 虚拟卡片：当新衣放进衣柜，问它能和现有衣服配出几套（已存套搭中同细分可替换 + 厚薄兼容温度带的套数；也可送进搭配板自由试配）</div>
+          <div class="mini"><b>①</b> AI 看图比对（codex 直调，点按钮才联网）：提取描述卡与尺寸表，对照基准款给<b>建议码数+理由</b></div>
+          <div class="mini"><b>②</b> 查重判断：衣柜里有没有差不多的（AI 定性 + 本地打分 ≥6 高度相似 / ≥3 有些像 双印证）</div>
+          <div class="mini"><b>③</b> 搭配面与结论：能配什么、一句话买不买；本地另算能配几套 + 并排尺码对照表</div>
         </div>
         <span class="farrow">→</span>
         <div class="fout">
-          <div class="ok">买了 → 一键转正式档案（分到下一个衣柜编号）</div>
-          <div class="no">没买 → 丢掉</div>
+          <div class="ok">买了 → 转正式档案（AI 卡缺口字段先补齐，分下一个编号）</div>
+          <div class="no">没买 → 丢掉（截图任务文件夹一并清理）</div>
         </div>
       </div>
-      <div class="callout">结局二选一。待买区不沉淀垃圾数据。待买 = 档案里 status 标记（不占衣柜编号、不能标基准款、被虚拟搭配引用时丢不掉）；查重与配几套全程离线。</div>
+      <div class="callout">隐私边界：发送内容 = 新衣截图 + 衣柜文字卡，衣柜照片不发，界面常显说明。AI 结果经词表双重校验（schema enum + 服务端复核），词表外值置空留痕，不默默入库。</div>
     </div>
   </div>
 
@@ -765,8 +765,8 @@ footer b{color:var(--ink2)}
   <div class="phase p2 rv">
     <div class="phase-h"><span class="pn">Ⅱ</span><span class="pt">第二期</span><span class="ps">买前模块 + AI 增强</span></div>
     <ol>
-      <li><div class="li-t"><b>买前对照台</b>：待买区、买前查重、虚拟卡片问配几套、买完转正式档案。<span class="li-chip">已实现 · 2026-11-17</span><small>38 项单元测试 + 38 项端到端验收全绿，全程离线。</small></div></li>
-      <li><div class="li-t"><b>AI 标注员</b>：固定词表预填描述卡 + 用户确认。<small>反哺第一期手动录入的存量卡片。</small></div></li>
+      <li><div class="li-t"><b>买前比对工作台</b>：丢淘宝截图 → codex AI 看图比对给结论 → 本地印证 → 转正/丢掉。<span class="li-chip">已实现 · 2026-11-17</span><small>46 项单元测试 + 22 项端到端 + 真实 codex 冒烟全绿。</small></div></li>
+      <li><div class="li-t"><b>AI 标注员</b>：固定词表预填描述卡 + 用户确认。<small>反哺第一期手动录入的存量卡片；沿用已跑通的 Codex 直调通道。</small></div></li>
       <li><div class="li-t"><b>AI 帮忙搭配</b>：防跑偏优先级、默认不传照片、视觉复核开关默认关、接上「立刻换一套」。</div></li>
       <li><div class="li-t"><b>自然语言「问 ChatGPT」</b>：手动入口正式接入。</div></li>
     </ol>

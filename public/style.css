@@ -348,7 +348,7 @@ footer{margin-top:64px;text-align:center;font-size:11px;letter-spacing:.4em;colo
 .del-confirm.show{display:flex}
 .del-confirm span{font-size:12.5px;color:var(--accent);letter-spacing:.08em}
 
-/* ---------- 待买区 ---------- */
+/* ---------- 买前比对（临时） ---------- */
 /* 待买角标：空心细线（与实心的「基准款」区分——还没买到手） */
 .figure .badge-wish{
   position:absolute;top:0;right:0;background:var(--paper);color:var(--ink-2);
@@ -361,15 +361,29 @@ footer{margin-top:64px;text-align:center;font-size:11px;letter-spacing:.4em;colo
 .bitem .f .badge-wish{font-size:9px;padding:2px 6px;letter-spacing:.18em}
 .pick-card .f{position:relative}
 .pick-card .f .badge-wish{font-size:9px;padding:2px 6px;letter-spacing:.18em}
-/* 衣柜页底 → 待买区横条 */
-.wish-strip{
-  display:flex;justify-content:space-between;align-items:baseline;gap:18px;
-  border:1px dashed var(--hair);border-left:2px solid var(--accent);
-  margin-top:34px;padding:16px 22px;text-decoration:none;color:var(--ink);
-  font-size:13px;letter-spacing:.2em;transition:.2s;
+/* 截图上传网格 */
+.compare-drop{display:flex;gap:12px;flex-wrap:wrap;border:1px dashed var(--hair);padding:14px;transition:.2s;cursor:pointer}
+.compare-drop.drag{border-color:var(--accent);background:var(--hover)}
+.compare-drop .cd-empty{font-size:12.5px;letter-spacing:.08em;color:var(--ink-2);padding:22px 10px;line-height:2}
+.compare-drop .cd-cell{position:relative;width:104px;height:104px;border:1px solid var(--hair);background:#FDFCF9}
+.compare-drop .cd-cell img{width:100%;height:100%;object-fit:cover;display:block}
+.compare-drop .cd-cell .rm{
+  position:absolute;top:-8px;right:-8px;width:20px;height:20px;line-height:18px;text-align:center;
+  background:var(--ink);color:var(--paper);border:none;font-size:12px;cursor:pointer;
 }
-.wish-strip:hover{background:var(--hover)}
-.wish-strip span{font-size:11px;letter-spacing:.12em;color:var(--ink-2)}
+.compare-drop .cd-add{
+  width:104px;height:104px;border:1px dashed var(--hair);background:transparent;
+  color:var(--ink-2);font-size:12px;letter-spacing:.1em;cursor:pointer;transition:.2s;
+}
+.compare-drop .cd-add:hover{border-color:var(--ink);color:var(--ink)}
+/* AI 结论卡 */
+.ai-concl .ac-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.ai-concl .ac-cell{border:1px solid var(--hair);padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.ai-concl .ac-cell label{font-size:10.5px;letter-spacing:.3em;color:var(--ink-2)}
+.ai-concl .ac-cell b{font-family:var(--serif);font-size:17px;font-weight:500;line-height:1.5}
+.ai-concl .ac-cell span{font-size:12px;letter-spacing:.05em;color:var(--ink-2);line-height:1.8}
+.ai-concl .ac-final{border-left:2px solid var(--accent)}
+.ai-concl .ac-final b{color:var(--accent)}
 /* 买前查重 / 可配套数的结果行 */
 .dup-card{
   display:flex;justify-content:space-between;align-items:center;gap:16px;

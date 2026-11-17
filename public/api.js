@@ -29,6 +29,8 @@ export const api = {
   deleteCloth: (id) => request('DELETE', `/api/clothes/${id}`),
   promoteCloth: (id) => request('POST', `/api/clothes/${id}/promote`),
   precheck: (id) => request('GET', `/api/clothes/${id}/precheck`),
+  createPrecheckTask: (images) => request('POST', '/api/precheck-tasks', { images }),
+  runPrecheckTask: (taskId) => request('POST', `/api/precheck-tasks/${taskId}/run`),
   outfits: (params = {}) => {
     const q = new URLSearchParams(Object.entries(params).filter(([, v]) => v));
     const s = q.toString();
